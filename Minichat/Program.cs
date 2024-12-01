@@ -16,6 +16,8 @@ This chat app needs the following environment variables:
 - AZURE_SECRET_KEY
 - AZURE_ENDPOINT
 
+The AZURE_SECRET_KEY can be injected from a file (see below)
+
 */
 
 namespace Minichat;
@@ -24,8 +26,21 @@ internal class Program
 {
     static async Task Main(string[] args)
     {
+        InjectSecret();
         var p = new Program();
         await p.Start();
+    }
+
+    private static void InjectSecret()
+    {
+        var secretFilename = @"H:\ai\_demosecrets\east-us-2.txt";
+        if (File.Exists(secretFilename))
+        {
+            var secret = File
+                    .ReadAllText(secretFilename)
+                    .Trim();
+            Environment.SetEnvironmentVariable("AZURE_SECRET_KEY", secret);
+        }
     }
 
     private JsonSerializerOptions _jsonOptions = new()
@@ -85,7 +100,7 @@ internal class Program
                 ? ChatToolChoice.CreateAutoChoice()
                 : ChatToolChoice.CreateNoneChoice(),
 
-            AllowParallelToolCalls = true,
+            //AllowParallelToolCalls = true,
         };
 
         foreach (var tool in tools)
