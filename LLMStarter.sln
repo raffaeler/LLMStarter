@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Minichat", "Minichat\Minich
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Similarities", "Similarities\Similarities.csproj", "{958FB890-F784-4346-A216-E7CFC8089C98}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MiniStreamingChat", "MiniStreamingChat\MiniStreamingChat.csproj", "{AC1398F5-C56A-4C3A-AE96-D757101F4B53}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{958FB890-F784-4346-A216-E7CFC8089C98}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{958FB890-F784-4346-A216-E7CFC8089C98}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{958FB890-F784-4346-A216-E7CFC8089C98}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AC1398F5-C56A-4C3A-AE96-D757101F4B53}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AC1398F5-C56A-4C3A-AE96-D757101F4B53}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AC1398F5-C56A-4C3A-AE96-D757101F4B53}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AC1398F5-C56A-4C3A-AE96-D757101F4B53}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
