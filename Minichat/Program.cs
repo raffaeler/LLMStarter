@@ -81,13 +81,15 @@ internal class Program
 
         var reverseStringToolDefinition =
             ChatTool.CreateFunctionTool(
-                "ReverseString",
-                "Reverse the string provided as input",
-                BinaryData.FromString(
+                functionName: "ReverseString",
+                functionDescription: "Reverse the string provided as input",
+                functionParameters: BinaryData.FromString(
                     FunctionJsonReverseParameters),
-                false);
+                functionSchemaIsStrict: false);
 
+        // Comment this line to disable the tool
         tools.Add(reverseStringToolDefinition);
+        // =====================================
 
         ChatCompletionOptions options = new()
         {
@@ -96,12 +98,13 @@ internal class Program
             TopP = 0.8f,
             FrequencyPenalty = 0,
             PresencePenalty = 0,
-            ToolChoice = tools.Count > 0
-                ? ChatToolChoice.CreateAutoChoice()
-                : ChatToolChoice.CreateNoneChoice(),
-
-            //AllowParallelToolCalls = true,
         };
+
+        if(tools.Count > 0)
+        {
+            options.ToolChoice = ChatToolChoice.CreateAutoChoice();
+            //options.AllowParallelToolCalls = true;
+        }
 
         foreach (var tool in tools)
         {
