@@ -1,16 +1,12 @@
 ﻿using System.ClientModel.Primitives;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Text;
 using System.Text.Json;
-
-using Azure.AI.OpenAI;
 
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualBasic;
 
 namespace MinichatExt;
 
@@ -88,8 +84,6 @@ internal class Program
 
     private string GetAzureModelName()
         => Environment.GetEnvironmentVariable("AZURE_MODEL_NAME") ?? throw new Exception("AZURE_MODEL_NAME not found");
-
-
 }
 
 public class ChatService : BackgroundService
