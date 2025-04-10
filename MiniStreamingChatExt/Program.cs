@@ -11,7 +11,6 @@ using Microsoft.Extensions.Logging;
 
 namespace MiniStreamingChatExt;
 
-
 /*
 
 This chat app needs the following environment variables:
@@ -22,7 +21,6 @@ This chat app needs the following environment variables:
 The AZURE_SECRET_KEY can be injected from a file (see below)
 
 */
-
 
 internal class Program
 {
@@ -137,7 +135,6 @@ public class ChatService : BackgroundService
         if (options.Tools.Count > 0)
         {
             options.ToolMode = ChatToolMode.Auto;
-            //options.AllowParallelToolCalls = true;
         }
         else
         {
@@ -202,15 +199,12 @@ public class ChatService : BackgroundService
                 prompts.Add(new ChatMessage(ChatRole.User, userMessage));
             }
 
-            // Variables accumulating the small parts
-            // of the completions while streaming
+            // Accumulating small updates/chunks while streaming
             ChatFinishReason? finishReason = default;
             ChatRole? streamedRole = default;
             StringBuilder contentBuilder = new();
             StringBuilder refusalBuilder = new();
-
             List<AIContent> toolCalls = [];
-            //Dictionary<string, PartialFunctionInfo> toolsPartialInfo = [];
 
             IAsyncEnumerable<ChatResponseUpdate> streaming =
                 _client.GetStreamingResponseAsync(prompts, options);
@@ -224,11 +218,8 @@ public class ChatService : BackgroundService
                     continue;
                 }
 
-                if (update.Role != null)
-                    streamedRole = update.Role;
-
-                if (update.FinishReason != null)
-                    finishReason = update.FinishReason;
+                if (update.Role != null) streamedRole = update.Role;
+                if (update.FinishReason != null) finishReason = update.FinishReason;
 
                 // Alternate colors to highlight the streaming
                 // of the completion.
@@ -259,49 +250,17 @@ public class ChatService : BackgroundService
                     else if (content is FunctionCallContent functionCallContent)
                     {
                         toolCalls.Add(functionCallContent);
-                        //if (!toolsPartialInfo.TryGetValue(functionCallContent.CallId,
-                        //    out PartialFunctionInfo? funcInfo) || funcInfo == null)
-                        //{
-                        //    funcInfo = new();
-                        //    toolsPartialInfo[functionCallContent.CallId] = funcInfo;
-                        //}
-
-                        //if (!string.IsNullOrEmpty(functionCallContent.Name))
-                        //{
-                        //    funcInfo.Name = functionCallContent.Name;
-                        //}
-
-                        //if (functionCallContent.Arguments != null)
-                        //{
-                        //    foreach (var arg in functionCallContent.Arguments)
-                        //    {
-                        //        funcInfo.Arguments[arg.Key] = arg.Value;
-                        //    }
-                        //}
-
-                        //if (functionCallContent.Exception != null)
-                        //{
-                        //    Debug.Assert(false);
-                        //}
                     }
                     else if (content is DataContent dataContent)
                     {
-                        // image
+                        // images
                         var blob = dataContent.Data;
                         var mediaType = dataContent.MediaType;
                         var uri = dataContent.Uri;
-                        // ...
-                    }
-                    else if (content is FunctionResultContent functionResultContent)
-                    {
-                        //functionResultContent.CallId
-                        //functionResultContent.Result
-                        //functionResultContent.Exception
-                        Debug.Assert(false);
+                        // The Console does not support images :-)
                     }
                     else if (content is UsageContent usageContent)
                     {
-                        // TODO
                         var usage = usageContent.Details;
 
                         Console.WriteLine();
@@ -310,6 +269,8 @@ public class ChatService : BackgroundService
                     }
                     else
                     {
+                        // FunctionResultContent are not expected from the assistant
+                        // and will throw as well
                         throw new NotImplementedException(
                             $"Unsupported {content.GetType().FullName}");
                     }
@@ -319,12 +280,6 @@ public class ChatService : BackgroundService
 
             Console.ForegroundColor = currentColor;
             Console.WriteLine();
-
-            //foreach (KeyValuePair<string, PartialFunctionInfo> funcInfo in toolsPartialInfo)
-            //{
-            //    toolCalls.Add(new FunctionCallContent(funcInfo.Key, funcInfo.Value.Name, funcInfo.Value.Arguments));
-            //}
-
 
             var completion = contentBuilder.ToString();
             if (completion?.Length > 0)
@@ -369,9 +324,6 @@ public class ChatService : BackgroundService
             }
         }
         while (true);
-
-
-
     }
 
     /// <summary>
@@ -409,12 +361,4 @@ public class ChatService : BackgroundService
     /// <returns>The string from the model</returns>
     private string GetAnswer(ChatResponse completion)
         => string.Join(string.Empty, completion.Messages.Select(m => m.Text));
-
-
 }
-
-//internal class PartialFunctionInfo
-//{
-//    public string Name { get; set; } = string.Empty;
-//    public Dictionary<string, object?> Arguments { get; } = new();
-//}
