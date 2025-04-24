@@ -1,6 +1,7 @@
 ﻿using System.ClientModel.Primitives;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 
@@ -51,6 +52,8 @@ internal class Program
                                  RetryPolicy = new ClientRetryPolicy(3),
                              }).GetChatClient(modelname)));
 
+                services.AddTransient<CustomTool>();
+
                 services.AddHostedService<ChatService>();
             });
         var app = host.Build();
@@ -90,25 +93,23 @@ public class ChatService : BackgroundService
 {
     private readonly ILogger _logger;
     private readonly IHostApplicationLifetime _lifetime;
+    private readonly CustomTool _customTool;
     private readonly IChatClient _client;
-    private AIFunction? _tool;
+    private Dictionary<string, AIFunction> _tools = new();
     private static Func<string, Dictionary<string, object?>?> _toolsArgumentParser =
         static json => JsonSerializer.Deserialize<Dictionary<string, object?>>(json, AIJsonUtilities.DefaultOptions);
 
     public ChatService(
         ILogger<ChatService> logger,
         IHostApplicationLifetime lifetime,
+        CustomTool customTool,
         IChatClient client)
     {
         _logger = logger;
         _lifetime = lifetime;
+        _customTool = customTool;
         _client = client;
     }
-
-    [Description("Reverse a string")]
-    [return: Description("The reversed string")]
-    public string ReverseString([Description("The string to reverse")] string text)
-        => new string(text.Reverse().ToArray());
 
     /// <summary>
     /// Starts the chat
@@ -121,7 +122,48 @@ public class ChatService : BackgroundService
 
         string? systemPrompt = GetOptionalSystemPrompt();
 
-        _tool = AIFunctionFactory.Create(ReverseString);
+        AIFunctionFactoryOptions ffOptions = new()
+        {
+            ConfigureParameterBinding = (parameter) =>
+            {
+                // This is the default behavior
+                // The parameter name is used as the key
+                // in the JSON object
+                //binding.Name = parameter.Name;
+
+                if (parameter.Name != "redact" ||
+                    parameter.ParameterType != typeof(bool))
+                {
+                    return default;
+                }
+
+                return new()
+                {
+                    // redact is not sent to the model
+                    ExcludeFromSchema = true,
+                    BindParameter = (ParameterInfo p, AIFunctionArguments a) =>
+                    {
+                        if (a.Context == null ||
+                            !a.Context.TryGetValue("redact",
+                                out object? redactObj) ||
+                            redactObj == null ||
+                            redactObj is not bool)
+                        {
+                            return default;
+                        }
+
+                        var redact = (bool)redactObj;
+                        return redact;
+                    }
+                };
+            },
+        };
+
+        _tools[nameof(_customTool.ReverseString)] =
+            AIFunctionFactory.Create(_customTool.ReverseString, ffOptions);
+        _tools[nameof(_customTool.ToUpper)] =
+            AIFunctionFactory.Create(_customTool.ToUpper, ffOptions);
+
         ChatOptions options = new()
         {
             MaxOutputTokens = 500,
@@ -129,7 +171,7 @@ public class ChatService : BackgroundService
             TopP = 0.8f,
             FrequencyPenalty = 0,
             PresencePenalty = 0,
-            Tools = [_tool],
+            Tools = _tools.Values.OfType<AITool>().ToList(),
         };
 
         if (options.Tools.Count > 0)
@@ -339,10 +381,17 @@ public class ChatService : BackgroundService
         {
             var functionName = toolCall.Name;
             var arguments = new AIFunctionArguments(toolCall.Arguments);
+            arguments.Context = new Dictionary<object, object?>();
+            arguments.Context["redact"] = true;
 
             Debug.WriteLine($"AI asked to invoke function {functionName}(...)");
 
-            if (_tool == null) continue;
+            if(!_tools.TryGetValue(functionName, out AIFunction? _tool))
+            {
+                Console.WriteLine($"Unknown function {functionName}");
+                continue;
+            }
+
             var result = await _tool.InvokeAsync(arguments);
 
             ChatMessage responseMessage = new(ChatRole.Tool,
@@ -361,4 +410,24 @@ public class ChatService : BackgroundService
     /// <returns>The string from the model</returns>
     private string GetAnswer(ChatResponse completion)
         => string.Join(string.Empty, completion.Messages.Select(m => m.Text));
+}
+
+
+public class CustomTool
+{
+    [Description("Reverse a string")]
+    [return: Description("The reversed string")]
+    public string ReverseString([Description("The string to reverse")] string text) => new string(text.Reverse().ToArray());
+
+
+    [Description("Make the string uppercase")]
+    [return: Description("The uppercase string")]
+    public string ToUpper(
+        // this parameter will not be sent to the model!
+        bool redact,
+        [Description("The string whose case is to be changed")] string text)
+    {
+        if(redact) return new string('*', text.Length);
+        return text.ToUpper();
+    }
 }
