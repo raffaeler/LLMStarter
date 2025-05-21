@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -96,10 +97,16 @@ public class ChatService : BackgroundService
     private readonly CustomTool _customTool;
     private readonly IChatClient _client;
     private Dictionary<string, AIFunction> _tools = new();
+    private static JsonSerializerOptions _options = new()
+    {
+        WriteIndented = true,
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+    };
+
     private static Func<string, Dictionary<string, object?>?> _toolsArgumentParser =
         static json => JsonSerializer.Deserialize<Dictionary<string, object?>>(json, AIJsonUtilities.DefaultOptions);
 
-    public ChatService(
+    public ChatService( 
         ILogger<ChatService> logger,
         IHostApplicationLifetime lifetime,
         CustomTool customTool,
@@ -114,7 +121,8 @@ public class ChatService : BackgroundService
     /// <summary>
     /// Starts the chat
     /// </summary>
-    protected override async Task ExecuteAsync(CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(
+        CancellationToken cancellationToken = default)
     {
         Console.WriteLine("Minichat using Microsoft.Extensions.AI by Raffaele Rialdi");
         Console.WriteLine("");
@@ -251,6 +259,7 @@ public class ChatService : BackgroundService
             IAsyncEnumerable<ChatResponseUpdate> streaming =
                 _client.GetStreamingResponseAsync(prompts, options);
 
+            Debug.WriteLine("=== Asynchronous updates ===");
             int count = 0;
             await foreach (var update in streaming)
             {
@@ -259,6 +268,16 @@ public class ChatService : BackgroundService
                     Console.WriteLine("No response from the assistant");
                     continue;
                 }
+
+                // The partial update for the user can be captured by just
+                // using the ToString method:
+                // If the update contains any function related content or
+                // anything that is not addressed to the user, it will
+                // return an empty string which we can ignore.
+                // var textChunk = update.ToString();
+                // if (textChunk.Length > 0) { /* print/send to the user */ }
+
+                await Dump(update);
 
                 if (update.Role != null) streamedRole = update.Role;
                 if (update.FinishReason != null) finishReason = update.FinishReason;
@@ -307,7 +326,7 @@ public class ChatService : BackgroundService
 
                         Console.WriteLine();
                         Console.ForegroundColor = otherColor;
-                        Console.WriteLine($"Usage: T = {usage.TotalTokenCount} = I({usage.InputTokenCount}) + O({usage.OutputTokenCount})");
+                        Console.WriteLine($"Usage: T = {usage.TotalTokenCount} = I({usage.InputTokenCount}) + O({usage.OutputTokenCount}) + A({usage.AdditionalCounts?.Select(a => a.Value).Sum() ?? 0})");
                     }
                     else
                     {
@@ -320,6 +339,7 @@ public class ChatService : BackgroundService
                 }
             }
 
+            await Dump(streaming);
             Console.ForegroundColor = currentColor;
             Console.WriteLine();
 
@@ -368,6 +388,102 @@ public class ChatService : BackgroundService
         while (true);
     }
 
+    private async Task Dump(IAsyncEnumerable<ChatResponseUpdate> response)
+    {
+        var chatResponse = await response.ToChatResponseAsync();
+        var messages = chatResponse.Messages;
+        var json = JsonSerializer.Serialize(messages, _options) +
+            Environment.NewLine;
+        await File.AppendAllTextAsync("log_sync.json", json);
+    }
+
+    private async Task Dump(ChatResponseUpdate update)
+    {
+        var json = JsonSerializer.Serialize(update, _options) +
+            Environment.NewLine;
+        await File.AppendAllTextAsync("log_async.json", json);
+
+        var hasUserContent = update.Contents
+            .Any(c => c is TextContent ||
+                      c is TextReasoningContent ||
+                      c is DataContent ||
+                      c is UriContent ||
+                      c is ErrorContent ||
+                      c is UsageContent);
+
+        if (hasUserContent)
+        {
+            Debug.WriteLine(json);
+            Debug.WriteLine(string.Empty);
+            Debug.WriteLine(string.Empty);
+        }
+    }
+
+    private void Dump2(ChatResponseUpdate update)
+    {
+#if DEBUG
+        Debug.WriteLine($"Update: {update}");
+        Debug.WriteLine($"  MessageId: {update.MessageId}");
+        Debug.WriteLine($"  ResponseId: {update.ResponseId}");
+        Debug.WriteLine($"  CreatedAt: {update.CreatedAt}");
+        Debug.WriteLine($"  AuthorName: {update.AuthorName}");
+        Debug.WriteLine($"  ChatThreadId: {update.ChatThreadId}");
+        Debug.WriteLine($"  ModelId: {update.ModelId}");
+        Debug.WriteLine($"  Role: {update.Role}");
+        Debug.WriteLine($"  FinishReason: {update.FinishReason}");
+        Debug.WriteLine($"  Text: {update.Text}");
+        Debug.WriteLine($"  Contents: {update.Contents.Count}");
+        foreach (var content in update.Contents)
+        {
+            Debug.WriteLine($"    {content}");
+            Debug.WriteLine($"      Type: {content.GetType()}");
+            Debug.WriteLine($"      Properties: {content.AdditionalProperties?.Count}");
+            if (content is TextContent textContent)
+            {
+                Debug.WriteLine($"        Text: {textContent.Text}");
+            }
+            else if (content is TextReasoningContent textReasoningContent)
+            {
+                Debug.WriteLine($"        Reasoning: {textReasoningContent.Text}");
+            }
+            else if (content is DataContent dataContent)
+            {
+                Debug.WriteLine($"        Image Data: {dataContent.Data.Length} bytes");
+            }
+            else if (content is UsageContent usageContent)
+            {
+                var usage = usageContent.Details;
+                Debug.WriteLine($"        Usage: T = {usage.TotalTokenCount} = I({usage.InputTokenCount}) + O({usage.OutputTokenCount}) + A({usage.AdditionalCounts?.Select(a => a.Value).Sum() ?? 0})");
+            }
+            else if (content is FunctionCallContent functionCallContent)
+            {
+                var argsString = functionCallContent.Arguments == null
+                    ? "(no arguments)"
+                    : string.Join(", ", functionCallContent.Arguments
+                        .Select(a => $"{a.Key}: {a.Value}"));
+
+                Debug.WriteLine($"        CallId: {functionCallContent.CallId}");
+                Debug.WriteLine($"        Function: {functionCallContent.Name}");
+                Debug.WriteLine($"        Arguments: {argsString}");
+            }
+            else if (content is FunctionResultContent functionResultContent)
+            {
+                Debug.WriteLine($"        CallId: {functionResultContent.CallId}");
+                Debug.WriteLine($"        Result: {functionResultContent.Result}");
+                Debug.WriteLine($"        Exception: {functionResultContent.Exception}");
+            }
+            else
+            {
+                Debug.WriteLine($"        Unexpected {content.GetType().Name}");
+            }
+        }
+        Debug.WriteLine($"  RawRepresentation: \r\n{JsonSerializer.Serialize(update.RawRepresentation, _options)}");
+        Debug.WriteLine(string.Empty);
+        Debug.WriteLine(string.Empty);
+
+#endif
+    }
+
     /// <summary>
     /// This method processes the tool request
     /// </summary>
@@ -386,7 +502,7 @@ public class ChatService : BackgroundService
 
             Debug.WriteLine($"AI asked to invoke function {functionName}(...)");
 
-            if(!_tools.TryGetValue(functionName, out AIFunction? _tool))
+            if (!_tools.TryGetValue(functionName, out AIFunction? _tool))
             {
                 Console.WriteLine($"Unknown function {functionName}");
                 continue;
@@ -427,7 +543,7 @@ public class CustomTool
         bool redact,
         [Description("The string whose case is to be changed")] string text)
     {
-        if(redact) return new string('*', text.Length);
+        if (redact) return new string('*', text.Length);
         return text.ToUpper();
     }
 }

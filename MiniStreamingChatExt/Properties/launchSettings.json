@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "MinichatExt": {
+    "MiniStreamingChatExt": {
       "commandName": "Project",
       "environmentVariables": {
         "AZURE_ENDPOINT": "https://oai-eastus-2.openai.azure.com",
