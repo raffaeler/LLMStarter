@@ -224,17 +224,22 @@ internal class Program
                         toolNamesByIndex[toolCallUpdate.Index] = toolCallUpdate.FunctionName;
                     }
 
-                    var arguments = toolCallUpdate.FunctionArgumentsUpdate.ToString();
-                    if (!string.IsNullOrEmpty(arguments))
+                    // IsEmpty requires the NuGet package System.Memory.Data
+                    // The following check is needed starting from version Azure.AI.OpenAI version 2.1.0
+                    if (!toolCallUpdate.FunctionArgumentsUpdate.IsEmpty)
                     {
-                        if (!toolArgumentsBuilders.TryGetValue(
-                            toolCallUpdate.Index, out StringBuilder? sb) || sb == null)
+                        var arguments = toolCallUpdate.FunctionArgumentsUpdate.ToString();
+                        if (!string.IsNullOrEmpty(arguments))
                         {
-                            sb = new();
-                            toolArgumentsBuilders[toolCallUpdate.Index] = sb;
-                        }
+                            if (!toolArgumentsBuilders.TryGetValue(
+                                toolCallUpdate.Index, out StringBuilder? sb) || sb == null)
+                            {
+                                sb = new();
+                                toolArgumentsBuilders[toolCallUpdate.Index] = sb;
+                            }
 
-                        sb.Append(arguments);
+                            sb.Append(arguments);
+                        }
                     }
                 }
             }

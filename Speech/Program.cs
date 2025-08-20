@@ -431,7 +431,7 @@ public class ChatService : BackgroundService
         Debug.WriteLine($"  ResponseId: {update.ResponseId}");
         Debug.WriteLine($"  CreatedAt: {update.CreatedAt}");
         Debug.WriteLine($"  AuthorName: {update.AuthorName}");
-        Debug.WriteLine($"  ChatThreadId: {update.ChatThreadId}");
+        //Debug.WriteLine($"  ChatThreadId: {update.ChatThreadId}");
         Debug.WriteLine($"  ModelId: {update.ModelId}");
         Debug.WriteLine($"  Role: {update.Role}");
         Debug.WriteLine($"  FinishReason: {update.FinishReason}");
