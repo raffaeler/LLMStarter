@@ -183,7 +183,7 @@ internal class ChatService : BackgroundService
 
         Console.WriteLine("Entering the chat loop.");
         Console.WriteLine("- type 'file' to send a prompt + document to the model.");
-        Console.WriteLine("- type 'elicit' to send a prompt about guessing a number.");
+        Console.WriteLine("- type 'elicit' to send a prompt about traveling.");
         Console.WriteLine("- type 'quit' or 'exit' to terminate the conversation.");
         List<ChatMessage> prompts = new();
         if (systemprompt != null)
