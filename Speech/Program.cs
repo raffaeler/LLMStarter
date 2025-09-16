@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging;
 namespace Speech;
 
 // ==
-// == This Example is unfinished and not working ==
+// == This Example is not yet ready and not working ==
 // ==
 
 
