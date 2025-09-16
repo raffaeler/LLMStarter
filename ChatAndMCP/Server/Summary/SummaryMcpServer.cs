@@ -57,7 +57,7 @@ internal class SummaryMcpServer : IMyMcpServer
     [McpServerTool(Name = "summary_createSummary")]
     [Description("Creates a summary of the given text")]
     [return: Description("A summary generated of the provided text")]
-    public async Task<IEnumerable<string>> CreateSummary(IMcpServer mcpServer,
+    public async Task<IEnumerable<string>> CreateSummary(IMcpServer server,
         [Description("Describe the desired summary style.")]
         string style,
         [Description("Specifies the length of the resulting document.")]
@@ -65,11 +65,18 @@ internal class SummaryMcpServer : IMyMcpServer
         [Description("The document to sum up.")]
         string document)
     {
+        var clientLogger = server
+            .AsClientLoggerProvider()
+            .CreateLogger(nameof(SummaryMcpServer));
+
+        clientLogger.LogInformation($"MCP {nameof(CreateSummary)}: style={style}, length={length}, document={document.Substring(0, 10)}...");
+
         _logger.LogInformation($"{nameof(CreateSummary)}: style={style}, length={length}, document={document.Substring(0, 10)}...");
-        CreateMessageResult result = await mcpServer.SampleAsync(new CreateMessageRequestParams()
-        {
-            SystemPrompt = SystemPrompt,
-            Messages =
+        CreateMessageResult result = await server.SampleAsync(
+            new CreateMessageRequestParams()
+            {
+                SystemPrompt = SystemPrompt,
+                Messages =
             [
                 new SamplingMessage()
                 {
@@ -80,10 +87,10 @@ internal class SummaryMcpServer : IMyMcpServer
                     },
                 },
             ],
-            MaxTokens = 300,
-            Temperature = 0.7f,
-            IncludeContext = ContextInclusion.ThisServer,
-        }, CancellationToken.None);
+                MaxTokens = 300,
+                Temperature = 0.7f,
+                IncludeContext = ContextInclusion.ThisServer,
+            }, CancellationToken.None);
 
         var textContent = result.Content as TextContentBlock;
         if (textContent == null)

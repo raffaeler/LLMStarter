@@ -183,7 +183,9 @@ internal class ChatService : BackgroundService
 
         Console.WriteLine("Entering the chat loop.");
         Console.WriteLine("- type 'file' to send a prompt + document to the model.");
-        Console.WriteLine("- type 'elicit' to send a prompt about traveling.");
+        Console.WriteLine("- type 'summary' to send a prompt + document to the model.");
+        Console.WriteLine("- type 'elicit' to send a prompt about guessing a number.");
+        Console.WriteLine("- type 'prep' to send a prompt and document to prepare.");
         Console.WriteLine("- type 'quit' or 'exit' to terminate the conversation.");
         List<ChatMessage> prompts = new();
         if (systemprompt != null)
@@ -211,6 +213,12 @@ internal class ChatService : BackgroundService
                     return;
                 }
                 else if (userMessage == "file")
+                {
+                    userMessage = GetPromptAboutLocalFiles();
+                    Console.WriteLine("Using prompt:");
+                    Console.WriteLine(userMessage);
+                }
+                else if (userMessage == "summary")
                 {
                     userMessage = GetPromptWithDocument();
                     Console.WriteLine("Using prompt:");
@@ -329,6 +337,9 @@ internal class ChatService : BackgroundService
         }
     }
 
+    private static string GetPromptAboutLocalFiles() => """
+        Tell me the names of the files available in the local disk.
+        """;
     /// <summary>
     /// «The Fox & the Grapes» by Aesop
     /// https://read.gov/aesop/005.html

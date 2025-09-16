@@ -107,6 +107,11 @@ internal class McpProxy : IAsyncDisposable
                 _clientToServerPipe.Writer.AsStream(),
                 _serverToClientPipe.Reader.AsStream());
 
+        Dictionary<string, Func<JsonRpcNotification, CancellationToken, ValueTask>> notificationHandlers = new();
+
+        notificationHandlers[NotificationMethods.LoggingMessageNotification] =
+            LoggingNotificationsHandler;
+
         McpClientOptions clientOptions = new()
         {
             InitializationTimeout = TimeSpan.FromSeconds(30),
@@ -119,7 +124,7 @@ internal class McpProxy : IAsyncDisposable
 
             Capabilities = new ClientCapabilities()
             {
-                //NotificationHandlers = ...,
+                NotificationHandlers = notificationHandlers,
 
                 //Roots = new()
                 //{
@@ -145,15 +150,53 @@ internal class McpProxy : IAsyncDisposable
 
 
         Client = await McpClientFactory.CreateAsync(transport, clientOptions, _loggerFactory);
-
         McpClientTask = Client.SetLoggingLevel(loggingLevel);
+
+        //Client.RegisterNotificationHandler(NotificationMethods.LoggingMessageNotification,
+        //    LoggingNotificationsHandler);
+
         await McpClientTask;
     }
 
+    private ValueTask LoggingNotificationsHandler(
+        JsonRpcNotification notification, CancellationToken cancellationToken)
+    {
+        Console.WriteLine($"[Notification received: {notification.Method}]");
+        if (JsonSerializer.Deserialize<LoggingMessageNotificationParams>(notification.Params) is { } ln)
+        {
+            //Console.WriteLine($"[{ln.Level}] {ln.Logger} {ln.Data}");
+            string serverMessage = ln.Data?.ToString() ?? string.Empty;
+            string message = $"From {ln.Logger}: {serverMessage}";
+
+            if (ln.Level == LoggingLevel.Debug)
+            {
+                _logger.LogDebug(message);
+            }
+            else if (ln.Level == LoggingLevel.Info)
+            {
+                _logger.LogInformation(message);
+            }
+            else if (ln.Level <= LoggingLevel.Warning)
+            {
+                _logger.LogWarning(message);
+            }
+            else
+            {
+                _logger.LogError(message);
+            }
+        }
+        else
+        {
+            Console.WriteLine($"Received unexpected logging notification: {notification.Params}");
+        }
+
+        return ValueTask.CompletedTask;
+    }
+
     private async ValueTask<CreateMessageResult> SamplingHandler(
-        CreateMessageRequestParams? createMessageRequestParams,
-        IProgress<ProgressNotificationValue> progress,
-        CancellationToken cancellationToken)
+            CreateMessageRequestParams? createMessageRequestParams,
+            IProgress<ProgressNotificationValue> progress,
+            CancellationToken cancellationToken)
     {
         Console.WriteLine($"[SamplingHandler invoked]");
 
