@@ -75,8 +75,29 @@ internal class Program
         builder.Services.AddSingleton<IMyMcpServer, SummaryMcpServer>();
         builder.Services.AddSingleton<IMyMcpServer, AskUserMcpServer>();
 
-        // InMemoryMcpService is used to talk in-process with the MCP servers
-        builder.Services.AddSingleton<InMemoryMcpService>();
+        // McpProxyFactoryService is used to bootstrap the MCP servers
+        builder.Services.AddSingleton<McpProxyFactoryService>();
+
+        // Add an external MCP server (Playwright)
+        builder.Services.AddSingleton(new ExternalStdioMcp()
+        {
+            // This requires the bridge to be added to Chrome:
+            // https://github.com/microsoft/playwright-mcp/blob/a70854c02f06f37550fb5409c551e855c2b42d0b/extension/README.md
+            // The @next version requires the canary version of the bridge
+            // https://github.com/microsoft/playwright-mcp/actions/runs/17628550304/artifacts/3980744469
+            // but I expect to be available in the standard version soon
+            Name = "PlaywrightMcp",
+            Command = "npx",
+            Arguments =
+            [
+                //"@playwright/mcp@latest",
+                "@playwright/mcp@next",
+                "--browser",
+                "chrome",                   // use Chrome
+                "--extension",              // connects to the bridge extension in chrome
+            ],
+            Type = "stdio",
+        });
 
 
         // ChatService manages the conversation with the interactive user

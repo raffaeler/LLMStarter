@@ -26,7 +26,7 @@ internal class ChatService : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly IHostApplicationLifetime _lifetime;
     //private readonly IChatClient _client;
-    private readonly InMemoryMcpService _inMemoryMcpService;
+    private readonly McpProxyFactoryService _inMemoryMcpService;
     private Dictionary<string, AIFunction> _tools = new();
     private Dictionary<string, AIFunction> _resources = new();
     private Dictionary<string, AIFunction> _prompts = new();
@@ -44,7 +44,7 @@ internal class ChatService : BackgroundService
         IServiceProvider serviceProvider,
         IHostApplicationLifetime lifetime,
         //IChatClient client,
-        InMemoryMcpService inMemoryMcpService)
+        McpProxyFactoryService inMemoryMcpService)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
@@ -185,7 +185,7 @@ internal class ChatService : BackgroundService
         Console.WriteLine("- type 'file' to send a prompt + document to the model.");
         Console.WriteLine("- type 'summary' to send a prompt + document to the model.");
         Console.WriteLine("- type 'elicit' to send a prompt about guessing a number.");
-        Console.WriteLine("- type 'prep' to send a prompt and document to prepare.");
+        Console.WriteLine("- type 'browse' to send a prompt about browsing with Playwright");
         Console.WriteLine("- type 'quit' or 'exit' to terminate the conversation.");
         List<ChatMessage> prompts = new();
         if (systemprompt != null)
@@ -214,19 +214,25 @@ internal class ChatService : BackgroundService
                 }
                 else if (userMessage == "file")
                 {
-                    userMessage = GetPromptAboutLocalFiles();
+                    userMessage = Prompts.GetPromptAboutLocalFiles();
                     Console.WriteLine("Using prompt:");
                     Console.WriteLine(userMessage);
                 }
                 else if (userMessage == "summary")
                 {
-                    userMessage = GetPromptWithDocument();
+                    userMessage = Prompts.GetPromptWithDocument();
                     Console.WriteLine("Using prompt:");
                     Console.WriteLine(userMessage);
                 }
                 else if (userMessage == "elicit")
                 {
-                    userMessage = GetPromptToElicitUser();
+                    userMessage = Prompts.GetPromptToElicitUser();
+                    Console.WriteLine("Using prompt:");
+                    Console.WriteLine(userMessage);
+                }
+                else if (userMessage == "browse")
+                {
+                    userMessage = Prompts.GetPromptToBrowseTheInternet();
                     Console.WriteLine("Using prompt:");
                     Console.WriteLine(userMessage);
                 }
@@ -336,41 +342,6 @@ internal class ChatService : BackgroundService
             prompts.Add(responseMessage);
         }
     }
-
-    private static string GetPromptAboutLocalFiles() => """
-        Tell me the names of the files available in the local disk.
-        """;
-    /// <summary>
-    /// «The Fox & the Grapes» by Aesop
-    /// https://read.gov/aesop/005.html
-    /// </summary>
-    /// <returns></returns>
-    private static string GetPromptWithDocument() => """
-        Make a very brief summary of the following document, explained for children:
-
-        ---
-
-        A Fox one day spied a beautiful bunch of ripe grapes hanging from a vine trained along the branches of a tree. The grapes seemed ready to burst with juice, and the Fox's mouth watered as he gazed longingly at them.
-
-        The bunch hung from a high branch, and the Fox had to jump for it. The first time he jumped he missed it by a long way. So he walked off a short distance and took a running leap at it, only to fall short once more. Again and again he tried, but in vain.
-
-        Now he sat down and looked at the grapes in disgust.
-
-        "What a fool I am," he said. "Here I am wearing myself out to get a bunch of sour grapes that are not worth gaping for."
-
-        And off he walked very, very scornfully.
-        """;
-
-
-    //private static string GetPromptToElicitUser() => """
-    //    Try to guess the number I'm thinking between 1 and 21 asking the minimum number of questions.
-    //    At the end, provide the guessed number and the number of questions asked.
-    //    """;
-
-    private static string GetPromptToElicitUser() => """
-        How long does it take to go from Rome to Madrid? Ask for help to the user using the tool!
-        """;
-
 
 
 }

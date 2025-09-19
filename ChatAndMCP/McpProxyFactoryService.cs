@@ -10,26 +10,29 @@ using ModelContextProtocol.Protocol;
 
 namespace ChatAndMCP;
 
-internal class InMemoryMcpService : IAsyncDisposable
+internal class McpProxyFactoryService : IAsyncDisposable
 {
     private readonly ILoggerFactory _loggerFactory;
     private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<InMemoryMcpService> _logger;
+    private readonly ILogger<McpProxyFactoryService> _logger;
     private readonly IEnumerable<IMyMcpServer> _mcpServers;
-    private List<McpProxy> _mcpProxies = [];
+    private readonly IEnumerable<ExternalStdioMcp> _externalStdioMcps;
+    private List<IMcpProxy> _mcpProxies = [];
 
-    public InMemoryMcpService(
+    public McpProxyFactoryService(
         ILoggerFactory loggerFactory,
         IServiceProvider serviceProvider,
-        IEnumerable<IMyMcpServer> mcpServers)
+        IEnumerable<IMyMcpServer> mcpServers,
+        IEnumerable<ExternalStdioMcp> externalStdioMcps)
     {
         _loggerFactory = loggerFactory;
         _serviceProvider = serviceProvider;
-        _logger = _loggerFactory.CreateLogger<InMemoryMcpService>();
+        _logger = _loggerFactory.CreateLogger<McpProxyFactoryService>();
         _mcpServers = mcpServers;
+        _externalStdioMcps = externalStdioMcps;
     }
 
-    public IReadOnlyCollection<McpProxy> McpProxies => _mcpProxies;
+    public IReadOnlyCollection<IMcpProxy> McpProxies => _mcpProxies;
 
     public async ValueTask DisposeAsync()
     {
@@ -42,12 +45,25 @@ internal class InMemoryMcpService : IAsyncDisposable
     public Task Start(LoggingLevel loggingLevel)
     {
         List<Task> tasks = new();
+
+        // in-process mcp servers
         foreach (var mcp in _mcpServers)
         {
-            McpProxy proxy = new(_loggerFactory, _serviceProvider, mcp);
+            McpProxyInProc proxy = new(_loggerFactory, _serviceProvider, mcp);
             _mcpProxies.Add(proxy);
             tasks.Add(proxy.Start(loggingLevel));
         }
+
+        // external stdio mcp servers
+        foreach (var extMcp in _externalStdioMcps)
+        {
+            if (!extMcp.IsEnabled) continue;
+
+            McpProxyStdio proxy = new(_loggerFactory, _serviceProvider, extMcp);
+            _mcpProxies.Add(proxy);
+            tasks.Add(proxy.Start());
+        }
+
         //=> Task.WhenAll(StartMcpServers(), StartMcpClient(loggingLevel));
         return Task.WhenAll(tasks);
     }
