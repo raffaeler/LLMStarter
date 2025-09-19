@@ -81,17 +81,22 @@ internal class Program
         // Add an external MCP server (Playwright)
         builder.Services.AddSingleton(new ExternalStdioMcp()
         {
-            // This requires the bridge to be added to Chrome:
-            // https://github.com/microsoft/playwright-mcp/blob/a70854c02f06f37550fb5409c551e855c2b42d0b/extension/README.md
-            // The @next version requires the canary version of the bridge
-            // https://github.com/microsoft/playwright-mcp/actions/runs/17628550304/artifacts/3980744469
-            // but I expect to be available in the standard version soon
+            // This requires the bridge to be added to Chrome (manually):
+            // https://github.com/microsoft/playwright-mcp/releases
+            // The first time you run the MCP server, it will ask to
+            // allow the browser to be remote controlled.
+            // It will also show a "token" that is needed to avoid
+            // to manually allow the operation every time.
+            // - Copy the token in the browser
+            // - Open the launchSettings.json file and add it to the
+            //   "environmentVariables" section as the value of
+            //   "PLAYWRIGHT_MCP_EXTENSION_TOKEN"
             Name = "PlaywrightMcp",
             Command = "npx",
             Arguments =
             [
-                //"@playwright/mcp@latest",
-                "@playwright/mcp@next",
+                "@playwright/mcp@latest",
+                //"@playwright/mcp@next",
                 "--browser",
                 "chrome",                   // use Chrome
                 "--extension",              // connects to the bridge extension in chrome

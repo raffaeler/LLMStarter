@@ -5,7 +5,12 @@
             "environmentVariables": {
                 "AZURE_ENDPOINT": "https://oai-eastus-2.openai.azure.com",
                 "AZURE_MODEL_NAME-X": "gpt-4-32k",
-                "AZURE_MODEL_NAME": "gpt-4.1-mini"
+                "AZURE_MODEL_NAME": "gpt-4.1-mini",
+
+
+                "PLAYWRIGHT-NOTE": "Read the note in the Program.cs file for this token",
+                "PLAYWRIGHT_MCP_EXTENSION_TOKEN": "LfbDA9QG3Fq92m_z__iAXkzgEVP4mVe8s_fyWDGN4Go"
+
             }
         }
     }
