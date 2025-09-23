@@ -75,9 +75,6 @@ internal class Program
         builder.Services.AddSingleton<IMyMcpServer, SummaryMcpServer>();
         builder.Services.AddSingleton<IMyMcpServer, AskUserMcpServer>();
 
-        // McpProxyFactoryService is used to bootstrap the MCP servers
-        builder.Services.AddSingleton<McpProxyFactoryService>();
-
         // Add an external MCP server (Playwright)
         builder.Services.AddSingleton(new ExternalStdioMcp()
         {
@@ -104,6 +101,9 @@ internal class Program
             Type = "stdio",
         });
 
+
+        // McpProxyFactoryService is used to bootstrap the MCP servers
+        builder.Services.AddSingleton<McpProxyFactoryService>();
 
         // ChatService manages the conversation with the interactive user
         builder.Services.AddHostedService<ChatService>();

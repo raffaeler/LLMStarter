@@ -26,7 +26,7 @@ internal class ChatService : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly IHostApplicationLifetime _lifetime;
     //private readonly IChatClient _client;
-    private readonly McpProxyFactoryService _inMemoryMcpService;
+    private readonly McpProxyFactoryService _mcpProxyFactoryService;
     private Dictionary<string, AIFunction> _tools = new();
     private Dictionary<string, AIFunction> _resources = new();
     private Dictionary<string, AIFunction> _prompts = new();
@@ -44,13 +44,13 @@ internal class ChatService : BackgroundService
         IServiceProvider serviceProvider,
         IHostApplicationLifetime lifetime,
         //IChatClient client,
-        McpProxyFactoryService inMemoryMcpService)
+        McpProxyFactoryService mcpProxyFactoryService)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
         _lifetime = lifetime;
         //_client = client;
-        _inMemoryMcpService = inMemoryMcpService;
+        _mcpProxyFactoryService = mcpProxyFactoryService;
     }
 
     /// <summary>
@@ -59,7 +59,7 @@ internal class ChatService : BackgroundService
     protected override async Task ExecuteAsync(
         CancellationToken cancellationToken = default)
     {
-        await _inMemoryMcpService.Start(LoggingLevel.Debug);
+        await _mcpProxyFactoryService.Start(LoggingLevel.Debug);
 
         Console.WriteLine("Minimal Chat also acting as MCP Client, by Raffaele Rialdi");
         Console.WriteLine("");
@@ -67,7 +67,7 @@ internal class ChatService : BackgroundService
 
         string? systemPrompt = GetOptionalSystemPrompt();
 
-        foreach (var proxy in _inMemoryMcpService.McpProxies)
+        foreach (var proxy in _mcpProxyFactoryService.McpProxies)
         {
             if (proxy.Client != null)
             {
