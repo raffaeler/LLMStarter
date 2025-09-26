@@ -23,7 +23,7 @@ public class McpProxyInProc : McpProxyBase, IMcpProxy, IAsyncDisposable
 
     private bool _isDisposed = false;
 
-    private IMcpServer? _server;
+    private McpServer? _server;
 
     public Task McpServerTask { get; private set; } = Task.CompletedTask;
     public Task McpClientTask { get; private set; } = Task.CompletedTask;
@@ -69,17 +69,13 @@ public class McpProxyInProc : McpProxyBase, IMcpProxy, IAsyncDisposable
 
     private Task StartMcpServer()
     {
-        McpServerOptions mcpServerOptions = new McpServerOptions()
-        {
-            ServerInfo = _myMcpServer.ServerInfo,
-            Capabilities = _myMcpServer.Capabilities,
-        };
+        McpServerOptions mcpServerOptions = _myMcpServer.McpServerOptions;
 
         StreamServerTransport transport = new(
             _clientToServerPipe.Reader.AsStream(),
             _serverToClientPipe.Writer.AsStream());
 
-        _server = McpServerFactory.Create(transport, mcpServerOptions, _loggerFactory, _serviceProvider);
+        _server = McpServer.Create(transport, mcpServerOptions, _loggerFactory, _serviceProvider);
 
         McpServerTask = _server.RunAsync();
         return McpServerTask;
@@ -108,32 +104,28 @@ public class McpProxyInProc : McpProxyBase, IMcpProxy, IAsyncDisposable
 
             Capabilities = new ClientCapabilities()
             {
-                NotificationHandlers = notificationHandlers,
 
                 Roots = new()
                 {
                     ListChanged = true,
-                    RootsHandler = RootsHandler,
-                },
-
-                Sampling = new()
-                {
-                    SamplingHandler = SamplingHandler,
-                },
-
-                Elicitation = new()
-                {
-                    ElicitationHandler = ElicitationHandlerQA,
                 },
 
                 //Experimental = ...,
             },
 
             //ProtocolVersion = "",
+
+            Handlers = new McpClientHandlers()
+            {
+                NotificationHandlers = notificationHandlers,
+                RootsHandler = RootsHandler,
+                SamplingHandler = SamplingHandler,
+                ElicitationHandler = ElicitationHandlerQA,
+            },
         };
 
 
-        Client = await McpClientFactory.CreateAsync(transport, clientOptions, _loggerFactory);
+        Client = await McpClient.CreateAsync(transport, clientOptions, _loggerFactory);
         McpClientTask = Client.SetLoggingLevel(loggingLevel);
 
         //Client.RegisterNotificationHandler(NotificationMethods.LoggingMessageNotification,

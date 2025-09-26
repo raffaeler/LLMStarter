@@ -45,31 +45,31 @@ internal class McpProxyStdio : McpProxyBase, IMcpProxy
         {
             Capabilities = new ClientCapabilities()
             {
-                NotificationHandlers = notificationHandlers,
 
                 //Roots = new()
                 //{
                 //    ListChanged = true,
-                //    RootsHandler = RootsHandler,
                 //},
 
                 Sampling = new()
                 {
-                    SamplingHandler = SamplingHandler,
                 },
 
-                //Elicitation = new()
-                //{
-                //    ElicitationHandler = ElicitationHandlerQA,
-                //},
-
                 //Experimental = ...,
+            },
+
+            Handlers = new McpClientHandlers()
+            {
+                NotificationHandlers = notificationHandlers,
+                SamplingHandler = SamplingHandler,
+                //ElicitationHandler = ElicitationHandlerQA,
+
             },
         };
 
         try
         {
-            Client = await McpClientFactory.CreateAsync(
+            Client = await McpClient.CreateAsync(
                 transport, clientOptions, _loggerFactory, default);
         }
         catch (Exception err)

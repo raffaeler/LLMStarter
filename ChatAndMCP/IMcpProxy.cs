@@ -10,5 +10,5 @@ namespace ChatAndMCP;
 
 public interface IMcpProxy : IAsyncDisposable
 {
-    public IMcpClient? Client { get; }
+    public McpClient? Client { get; }
 }

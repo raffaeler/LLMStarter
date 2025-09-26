@@ -22,42 +22,36 @@ internal class SummaryMcpServer : IMyMcpServer
     {
         _logger = logger;
 
-        ServerInfo = new()
+        Implementation serverInfo = new()
         {
             Name = "Summary MCP Server",
             Title = "Use a sampling client to make a summary of the given resource",
             Version = "1.0.0",
         };
 
-        Capabilities = new()
+        ServerCapabilities capabilities = new() { /* ... */ };
+
+        McpServerOptions = new()
         {
-            Tools = new ToolsCapability()
-            {
-                ToolCollection =
-                [
-                    McpServerTool.Create(CreateSummary),
-                ],
-            },
-
-            Prompts = new PromptsCapability()
-            {
-                PromptCollection =
-                [
-                    McpServerPrompt.Create(GetSummaryPrompt)
-                ],
-            }
-
+            ServerInfo = serverInfo,
+            Capabilities = capabilities,
+            ToolCollection =
+            [
+                McpServerTool.Create(CreateSummary),
+            ],
+            PromptCollection =
+            [
+                McpServerPrompt.Create(GetSummaryPrompt)
+            ],
         };
     }
 
-    public Implementation ServerInfo { get; }
-    public ServerCapabilities Capabilities { get; }
-
+    public McpServerOptions McpServerOptions { get; }
 
     [McpServerTool(Name = "summary_createSummary")]
     [Description("Creates a summary of the given text")]
     [return: Description("A summary generated of the provided text")]
-    public async Task<IEnumerable<string>> CreateSummary(IMcpServer server,
+    public async Task<IEnumerable<string>> CreateSummary(McpServer server,
         [Description("Describe the desired summary style.")]
         string style,
         [Description("Specifies the length of the resulting document.")]

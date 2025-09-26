@@ -216,7 +216,7 @@ public class ChatService : BackgroundService
             // ...
         };
 
-        string answer = "";
+        //string answer = "";
         bool lastWasTool = false;
         do
         {

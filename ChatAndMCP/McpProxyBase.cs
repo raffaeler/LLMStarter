@@ -29,7 +29,7 @@ public abstract class McpProxyBase : IMcpProxy
         _logger = _loggerFactory.CreateLogger<McpProxyBase>();
     }
 
-    public IMcpClient? Client { get; protected set; }
+    public McpClient? Client { get; protected set; }
 
     public virtual ValueTask DisposeAsync()
     {

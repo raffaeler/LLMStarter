@@ -22,38 +22,36 @@ internal class LocalFilesMcpServer : IMyMcpServer
         ILogger<LocalFilesMcpServer> logger,
         IOptions<LocalFilesMcpServerConfiguration> localFilesMcpServerConfiguration)
     {
+        _logger = logger;
         _localFilesMcpServerConfiguration = localFilesMcpServerConfiguration.Value;
 
-        ServerInfo = new()
+        Implementation serverInfo = new()
         {
             Name = "Local Files MCP Server",
             Title = "Allows to read files from a local folder",
             Version = "1.0.0",
         };
 
-        Capabilities = new()
-        {
-            Tools = new ToolsCapability()
-            {
-                ToolCollection =
-                [
-                    McpServerTool.Create(GetFilenames, new() { /* ... */}),
-                    McpServerTool.Create(GetDocument, new() { /* ... */}),
-                ],
-            }
+        ServerCapabilities capabilities = new() { /* ... */ };
 
+        McpServerOptions = new()
+        {
+            ServerInfo = serverInfo,
+            Capabilities = capabilities,
+            ToolCollection =
+            [
+                McpServerTool.Create(GetFilenames, new() { /* ... */}),
+                McpServerTool.Create(GetDocument, new() { /* ... */}),
+            ],
         };
-        _logger = logger;
     }
 
-    public Implementation ServerInfo { get; }
-    public ServerCapabilities Capabilities { get; }
-
+    public McpServerOptions McpServerOptions { get; }
 
     [McpServerTool(Name = "localFiles_getFilenames")]
     [Description("Get the list of filenames on the local disk. This must be called first, in order to obtain the list of the names of the files.")]
     [return: Description("The list of file names.")]
-    public Task<string[]> GetFilenames(IMcpServer server)
+    public Task<string[]> GetFilenames(McpServer server)
     {
         var clientLogger = server
             .AsClientLoggerProvider()
@@ -72,7 +70,7 @@ internal class LocalFilesMcpServer : IMyMcpServer
     [McpServerTool(Name = "localFiles_getDocument")]
     [Description("Get the content of a file, given its filename")]
     [return: Description("The content of the document")]
-    public async Task<string> GetDocument(IMcpServer server,
+    public async Task<string> GetDocument(McpServer server,
         [Description("The name of the file, including the extension")]
         string filename)
     {

@@ -23,43 +23,32 @@ internal class AskUserMcpServer : IMyMcpServer
     {
         _logger = logger;
 
-        ServerInfo = new()
+        Implementation serverInfo = new()
         {
             Name = "AskUser MCP Server",
             Title = "Provides the tool askuser_askquestion to interactively ask questions to the user",
             Version = "1.0.0",
         };
 
-        Capabilities = new()
-        {
-            Tools = new ToolsCapability()
-            {
-                ToolCollection =
-                [
-                    McpServerTool.Create(AskQuestion),
-                ],
-            },
+        ServerCapabilities capabilities = new() { /* ... */ };
 
-            Prompts = new PromptsCapability()
-            {
-                PromptCollection =
-                [
-                    McpServerPrompt.Create(ElicitSystemPrompt)
-                ],
-            }
+        McpServerOptions = new()
+        {
+            ServerInfo = serverInfo,
+            Capabilities = capabilities,
+            ToolCollection = [McpServerTool.Create(AskQuestion)],
+            PromptCollection = [McpServerPrompt.Create(ElicitSystemPrompt)],
         };
     }
 
-    public Implementation ServerInfo { get; }
-    public ServerCapabilities Capabilities { get; }
-
+    public McpServerOptions McpServerOptions { get; }
 
     [McpServerTool(Name = "askuser_askquestion")]
     [Description("""
         Use this tool to ask a question about their last request whenever you need more information or a clarification from the user.
         """)]
     [return: Description("The answer to the question, provided by the user")]
-    public async Task<string> AskQuestion(IMcpServer server,
+    public async Task<string> AskQuestion(McpServer server,
         [Description("The question asked to the user")]
         string question)
     {

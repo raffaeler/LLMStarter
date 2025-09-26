@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 
 namespace ChatAndMCP;
 
@@ -14,6 +14,5 @@ namespace ChatAndMCP;
 /// </summary>
 public interface IMyMcpServer
 {
-    Implementation ServerInfo { get; }
-    ServerCapabilities Capabilities { get; }
+    McpServerOptions McpServerOptions { get; }
 }
