@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="Readme.md" />
+  </Folder>
+  <Project Path="ChatAndMCP/ChatAndMCP.csproj" />
+  <Project Path="Minichat/Minichat.csproj" />
+  <Project Path="MinichatExt/MinichatExt.csproj" />
+  <Project Path="MiniStreamingChat/MiniStreamingChat.csproj" />
+  <Project Path="MiniStreamingChatExt/MiniStreamingChatExt.csproj" />
+  <Project Path="Similarities/Similarities.csproj" />
+  <Project Path="Speech/Speech.csproj" />
+</Solution>
