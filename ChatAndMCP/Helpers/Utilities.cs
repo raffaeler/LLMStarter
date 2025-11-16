@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace ChatAndMCP;
+namespace ChatAndMCP.Helpers;
 
 internal static class Utilities
 {

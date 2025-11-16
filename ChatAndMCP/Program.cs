@@ -1,5 +1,6 @@
 ﻿using System.ClientModel.Primitives;
 
+using ChatAndMCP.Helpers;
 using ChatAndMCP.Server.AskUser;
 using ChatAndMCP.Server.LocalFiles;
 using ChatAndMCP.Server.Summary;

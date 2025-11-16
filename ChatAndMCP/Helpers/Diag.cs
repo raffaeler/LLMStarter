@@ -10,7 +10,7 @@ using Microsoft.Extensions.AI;
 
 namespace ChatAndMCP.Helpers;
 
-internal static class LoggingExtensions
+internal static class Diag
 {
     public static async Task Dump(this IAsyncEnumerable<ChatResponseUpdate> response,
         JsonSerializerOptions? _options = null)

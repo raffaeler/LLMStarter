@@ -153,7 +153,7 @@ public class ChatService : BackgroundService
             {
                 Console.Write("You: ");
                 var userMessage = Console.ReadLine();
-                if (userMessage == "exit")
+                if (userMessage == "quit" || userMessage == "exit")
                 {
                     Console.WriteLine("Goodbye!");
                     return;
