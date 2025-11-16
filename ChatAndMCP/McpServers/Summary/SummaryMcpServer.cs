@@ -5,13 +5,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using ChatAndMCP.McpHelpers;
+
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
-namespace ChatAndMCP.Server.Summary;
+namespace ChatAndMCP.McpServers.Summary;
 
 internal class SummaryMcpServer : IMyMcpServer
 {

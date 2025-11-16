@@ -16,8 +16,14 @@ public class ChatService : BackgroundService
     private readonly CustomTool _customTool;
     private readonly IChatClient _client;
     private Dictionary<string, AIFunction> _tools = new();
-    private static Func<string, Dictionary<string, object?>?> _toolsArgumentParser =
-        static json => JsonSerializer.Deserialize<Dictionary<string, object?>>(json, AIJsonUtilities.DefaultOptions);
+    private static JsonSerializerOptions _options = new()
+    {
+        WriteIndented = true,
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+    };
+
+    //private static Func<string, Dictionary<string, object?>?> _toolsArgumentParser =
+    //    static json => JsonSerializer.Deserialize<Dictionary<string, object?>>(json, AIJsonUtilities.DefaultOptions);
 
     public ChatService( 
         ILogger<ChatService> logger,
@@ -142,7 +148,7 @@ public class ChatService : BackgroundService
         var currentColor = Console.ForegroundColor;
         var evenColor = ConsoleColor.Yellow;
         var oddColor = ConsoleColor.Green;
-        var otherColor = ConsoleColor.Cyan;
+        var usageColor = ConsoleColor.Cyan;
 
         string answer = "";
         bool lastWasTool = false;
@@ -162,140 +168,72 @@ public class ChatService : BackgroundService
                 prompts.Add(new ChatMessage(ChatRole.User, userMessage));
             }
 
-            // Accumulating small updates/chunks while streaming
-            ChatFinishReason? finishReason = default;
-            ChatRole? streamedRole = default;
-            StringBuilder contentBuilder = new();
-            StringBuilder refusalBuilder = new();
-            List<AIContent> toolCalls = [];
-
             IAsyncEnumerable<ChatResponseUpdate> streaming =
                 _client.GetStreamingResponseAsync(prompts, options);
 
             Debug.WriteLine("=== Asynchronous updates ===");
-            int count = 0;
-            await foreach (var update in streaming)
-            {
-                if (update == null)
+            StreamingManager sm = new();
+            await sm.ProcessIncomingStreaming(streaming, _options, true,
+                onOutOfBandMessage: Console.WriteLine,
+                onToken: (token, isEven) =>
                 {
-                    Console.WriteLine("No response from the assistant");
-                    continue;
-                }
-
-                // The partial update for the user can be captured by just
-                // using the ToString method:
-                // If the update contains any function related content or
-                // anything that is not addressed to the user, it will
-                // return an empty string which we can ignore.
-                // var textChunk = update.ToString();
-                // if (textChunk.Length > 0) { /* print/send to the user */ }
-
-                await Diag.Dump(update);
-
-                if (update.Role != null) streamedRole = update.Role;
-                if (update.FinishReason != null) finishReason = update.FinishReason;
-
-                // Alternate colors to highlight the streaming
-                // of the completion.
-                // Usually the model is fast enough and the streming
-                // cannot be appreciated.
-                foreach (AIContent content in update.Contents)
+                    Console.ForegroundColor = isEven ? evenColor : oddColor;
+                    Console.Write(token);
+                },
+                onUsage: usage =>
                 {
-                    if (content is TextContent textContent)
-                    {
-                        if (count++ % 2 == 0)
-                            Console.ForegroundColor = evenColor;
-                        else
-                            Console.ForegroundColor = oddColor;
+                    Console.ForegroundColor = usageColor;
+                    Console.WriteLine(Environment.NewLine +
+                        $"Usage: T={usage.TotalTokenCount} = " +
+                        $"I({usage.InputTokenCount}) + " +
+                        $"O({usage.OutputTokenCount}) + " +
+                        $"A({usage.AdditionalCounts?.Select(a => a.Value).Sum() ?? 0})");
+                });
 
-                        Debug.Assert(update.Text == textContent.Text);
-                        contentBuilder.Append(textContent.Text);
-                        Console.Write(textContent.Text);
 
-                        if (content.AdditionalProperties != null &&
-                            content.AdditionalProperties.TryGetValue(
-                                "refusal", out object? refusal) &&
-                            refusal is string refusalText &&
-                            refusalText != null)
-                        {
-                            refusalBuilder.Append(refusalText);
-                        }
-                    }
-                    else if (content is FunctionCallContent functionCallContent)
-                    {
-                        toolCalls.Add(functionCallContent);
-                    }
-                    else if (content is DataContent dataContent)
-                    {
-                        // images
-                        var blob = dataContent.Data;
-                        var mediaType = dataContent.MediaType;
-                        var uri = dataContent.Uri;
-                        // The Console does not support images :-)
-                    }
-                    else if (content is UsageContent usageContent)
-                    {
-                        var usage = usageContent.Details;
+            if (sm.Completion?.Length > 0)
+                prompts.Add(new ChatMessage(ChatRole.Assistant, sm.Completion));
 
-                        Console.WriteLine();
-                        Console.ForegroundColor = otherColor;
-                        Console.WriteLine($"Usage: T = {usage.TotalTokenCount} = I({usage.InputTokenCount}) + O({usage.OutputTokenCount}) + A({usage.AdditionalCounts?.Select(a => a.Value).Sum() ?? 0})");
-                    }
-                    else
-                    {
-                        // FunctionResultContent are not expected from the assistant
-                        // and will throw as well
-                        throw new NotImplementedException(
-                            $"Unsupported {content.GetType().FullName}");
-                    }
+            if (sm.ToolCalls.Count > 0)
+                prompts.Add(new ChatMessage(ChatRole.Assistant, sm.ToolCalls));
 
-                }
-            }
 
-            await Diag.Dump(streaming);
             Console.ForegroundColor = currentColor;
             Console.WriteLine();
 
-            var completion = contentBuilder.ToString();
-            if (completion?.Length > 0)
-                prompts.Add(new ChatMessage(ChatRole.Assistant, completion));
-            if (toolCalls.Count > 0)
-                prompts.Add(new ChatMessage(ChatRole.Assistant, toolCalls));
+            lastWasTool = false;
 
 
-            if (finishReason == ChatFinishReason.ContentFilter)
+            if (sm.FinishReason == ChatFinishReason.ContentFilter)
             {
                 // Content filtered by the model
                 answer = $"Answer was filtered";
-                lastWasTool = false;
-                Console.WriteLine($"AI Refusal: {refusalBuilder.ToString()}");
+                Console.WriteLine($"AI Refusal: {sm.RefusalMessage}");
             }
-            else if (finishReason == ChatFinishReason.Length)
+            else if (sm.FinishReason == ChatFinishReason.Length)
             {
                 // Max tokens reached
                 answer = "AI: Max tokens reached";
-                lastWasTool = false;
+                Console.WriteLine($"AI: {answer}");
             }
-            else if (finishReason == ChatFinishReason.Stop)
+            else if (sm.FinishReason == ChatFinishReason.Stop)
             {
                 // The completion is ready
                 // An answer is finally available
-                answer = completion ?? string.Empty;
+                answer = sm.Completion ?? string.Empty;
                 Debug.WriteLine($"AI: {answer}");
-                lastWasTool = false;
             }
-            else if (finishReason == ChatFinishReason.ToolCalls)
+            else if (sm.FinishReason == ChatFinishReason.ToolCalls)
             {
                 // The model requested to invoke a tool
                 // Tools are the new name for Functions
                 answer = "AI: tool request";
-                await ProcessToolRequest(toolCalls, prompts);
+                await ProcessToolRequest(sm.ToolCalls, prompts);
                 lastWasTool = true;
             }
             else
             {
-                answer = $"AI: Finish reason: {finishReason}";
-                lastWasTool = false;
+                answer = $"AI: Finish reason: {sm.FinishReason}";
             }
         }
         while (true);

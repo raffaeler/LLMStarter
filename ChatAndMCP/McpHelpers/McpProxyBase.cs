@@ -13,7 +13,7 @@ using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
-namespace ChatAndMCP;
+namespace ChatAndMCP.McpHelpers;
 
 public abstract class McpProxyBase : IMcpProxy
 {

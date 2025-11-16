@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 using ModelContextProtocol.Protocol;
 
-namespace ChatAndMCP;
+namespace ChatAndMCP.McpHelpers;
 
 internal class McpProxyFactoryService : IAsyncDisposable
 {

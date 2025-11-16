@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
-namespace ChatAndMCP;
+namespace ChatAndMCP.McpHelpers;
 
 internal class McpProxyStdio : McpProxyBase, IMcpProxy
 {

@@ -7,6 +7,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
+using MiniStreamingChatExt.Helpers;
+
 namespace MiniStreamingChatExt;
 
 /*
@@ -24,11 +26,10 @@ internal class Program
 {
     static async Task Main(string[] args)
     {
-        InjectSecret();
-        var p = new Program();
-        var endpoint = p.GetAzureEndpoint();
-        var secretKey = p.GetAzureSecretKey();
-        var modelname = p.GetAzureModelName();
+        Utilities.InjectSecret();
+        var endpoint = Utilities.GetAzureEndpoint();
+        var secretKey = Utilities.GetAzureSecretKey();
+        var modelname = Utilities.GetAzureModelName();
 
         var host = Host.CreateDefaultBuilder(args)
             .ConfigureLogging(logging =>
@@ -58,30 +59,4 @@ internal class Program
         await app.RunAsync();
     }
 
-    private static void InjectSecret()
-    {
-        var secretFilename = @"H:\ai\_demosecrets\east-us-2.txt";
-        if (File.Exists(secretFilename))
-        {
-            var secret = File
-                    .ReadAllText(secretFilename)
-                    .Trim();
-            Environment.SetEnvironmentVariable("AZURE_SECRET_KEY", secret);
-        }
-    }
-
-    private JsonSerializerOptions _jsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    };
-
-    private string GetAzureEndpoint()
-        => Environment.GetEnvironmentVariable("AZURE_ENDPOINT") ?? throw new Exception("AZURE_ENDPOINT not found");
-
-    private string GetAzureSecretKey()
-        => Environment.GetEnvironmentVariable("AZURE_SECRET_KEY") ?? throw new Exception("AZURE_SECRET_KEY not found");
-
-    private string GetAzureModelName()
-        => Environment.GetEnvironmentVariable("AZURE_MODEL_NAME") ?? throw new Exception("AZURE_MODEL_NAME not found");
 }

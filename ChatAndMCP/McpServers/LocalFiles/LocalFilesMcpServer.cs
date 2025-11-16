@@ -5,13 +5,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using ChatAndMCP.McpHelpers;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
-namespace ChatAndMCP.Server.LocalFiles;
+namespace ChatAndMCP.McpServers.LocalFiles;
 
 internal class LocalFilesMcpServer : IMyMcpServer
 {

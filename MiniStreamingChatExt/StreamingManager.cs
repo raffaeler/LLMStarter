@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 
 using Microsoft.Extensions.AI;
 
-using ChatAndMCP.Helpers;
+using MiniStreamingChatExt.Helpers;
 
-namespace ChatAndMCP;
+namespace MiniStreamingChatExt;
 
 /// <summary>
 /// This class manages the streaming loop of the assistant answer.

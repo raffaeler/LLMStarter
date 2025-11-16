@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 using ModelContextProtocol.Server;
 
-namespace ChatAndMCP;
+namespace ChatAndMCP.McpHelpers;
 
 /// <summary>
 /// A convenient common interface implemented

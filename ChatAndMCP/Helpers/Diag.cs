@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 using Microsoft.Extensions.AI;
 
@@ -13,19 +9,19 @@ namespace ChatAndMCP.Helpers;
 internal static class Diag
 {
     public static async Task Dump(this IAsyncEnumerable<ChatResponseUpdate> response,
-        JsonSerializerOptions? _options = null)
+        JsonSerializerOptions? options = null)
     {
         var chatResponse = await response.ToChatResponseAsync();
         var messages = chatResponse.Messages;
-        var json = JsonSerializer.Serialize(messages, _options) +
+        var json = JsonSerializer.Serialize(messages, options) +
             Environment.NewLine;
         await File.AppendAllTextAsync("log_sync.json", json);
     }
 
     public static async Task Dump(this ChatResponseUpdate update,
-        JsonSerializerOptions? _options = null)
+        JsonSerializerOptions? options = null)
     {
-        var json = JsonSerializer.Serialize(update, _options) +
+        var json = JsonSerializer.Serialize(update, options) +
             Environment.NewLine;
         await File.AppendAllTextAsync("log_async.json", json);
 
@@ -46,7 +42,7 @@ internal static class Diag
     }
 
     public static void Dump2(this ChatResponseUpdate update,
-        JsonSerializerOptions? _options = null)
+        JsonSerializerOptions? options = null)
     {
 #if DEBUG
         Debug.WriteLine($"Update: {update}");
@@ -104,11 +100,9 @@ internal static class Diag
                 Debug.WriteLine($"        Unexpected {content.GetType().Name}");
             }
         }
-        Debug.WriteLine($"  RawRepresentation: \r\n{JsonSerializer.Serialize(update.RawRepresentation, _options)}");
+        Debug.WriteLine($"  RawRepresentation: \r\n{JsonSerializer.Serialize(update.RawRepresentation, options)}");
         Debug.WriteLine(string.Empty);
         Debug.WriteLine(string.Empty);
-
 #endif
     }
-
 }

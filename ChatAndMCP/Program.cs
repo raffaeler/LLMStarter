@@ -1,9 +1,10 @@
 ﻿using System.ClientModel.Primitives;
 
 using ChatAndMCP.Helpers;
-using ChatAndMCP.Server.AskUser;
-using ChatAndMCP.Server.LocalFiles;
-using ChatAndMCP.Server.Summary;
+using ChatAndMCP.McpHelpers;
+using ChatAndMCP.McpServers.AskUser;
+using ChatAndMCP.McpServers.LocalFiles;
+using ChatAndMCP.McpServers.Summary;
 
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
@@ -35,7 +36,6 @@ internal class Program
         builder.Services.Configure<LocalFilesMcpServerConfiguration>(
             builder.Configuration.GetSection("LocalFilesMcpServer"));
         #endregion
-
 
         #region main client configuration
         // the main client is the one used by the ChatService

@@ -6,6 +6,8 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
+using ChatAndMCP.McpHelpers;
+
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -36,8 +38,8 @@ internal class ChatService : BackgroundService
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
     };
 
-    private static Func<string, Dictionary<string, object?>?> _toolsArgumentParser =
-        static json => JsonSerializer.Deserialize<Dictionary<string, object?>>(json, AIJsonUtilities.DefaultOptions);
+    //private static Func<string, Dictionary<string, object?>?> _toolsArgumentParser =
+    //    static json => JsonSerializer.Deserialize<Dictionary<string, object?>>(json, AIJsonUtilities.DefaultOptions);
 
     public ChatService(
         ILogger<ChatService> logger,
@@ -179,7 +181,6 @@ internal class ChatService : BackgroundService
     {
         var client = _serviceProvider
             .GetRequiredKeyedService<IChatClient>("main");
-
 
         Console.WriteLine("Entering the chat loop.");
         Console.WriteLine("- type 'file' to send a prompt + document to the model.");
@@ -342,6 +343,5 @@ internal class ChatService : BackgroundService
             prompts.Add(responseMessage);
         }
     }
-
 
 }

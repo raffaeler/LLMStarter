@@ -7,12 +7,14 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
+using ChatAndMCP.McpHelpers;
+
 using Microsoft.Extensions.Logging;
 
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
-namespace ChatAndMCP.Server.AskUser;
+namespace ChatAndMCP.McpServers.AskUser;
 
 internal class AskUserMcpServer : IMyMcpServer
 {

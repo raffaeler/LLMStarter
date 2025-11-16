@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 using ModelContextProtocol.Client;
 
-namespace ChatAndMCP;
+namespace ChatAndMCP.McpHelpers;
 
 public interface IMcpProxy : IAsyncDisposable
 {

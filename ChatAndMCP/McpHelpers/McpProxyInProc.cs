@@ -11,7 +11,7 @@ using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
-namespace ChatAndMCP;
+namespace ChatAndMCP.McpHelpers;
 
 public class McpProxyInProc : McpProxyBase, IMcpProxy, IAsyncDisposable
 {
