@@ -1,15 +1,19 @@
 <Solution>
-  <Folder Name="/Experimental/">
-    <Project Path="Speech/Speech.csproj" />
+  <Folder Name="/AzureOpenAI/">
+    <Project Path="Minichat/Minichat.csproj" />
+    <Project Path="MiniStreamingChat/MiniStreamingChat.csproj" />
+  </Folder>
+  <Folder Name="/ExtensionsAI/">
+    <Project Path="MinichatExt/MinichatExt.csproj" />
+    <Project Path="MiniStreamingChatExt/MiniStreamingChatExt.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
     <File Path="Readme.md" />
   </Folder>
+  <Folder Name="/_Experimental/">
+    <Project Path="Speech/Speech.csproj" />
+  </Folder>
   <Project Path="ChatAndMCP/ChatAndMCP.csproj" />
-  <Project Path="Minichat/Minichat.csproj" />
-  <Project Path="MinichatExt/MinichatExt.csproj" />
-  <Project Path="MiniStreamingChat/MiniStreamingChat.csproj" />
-  <Project Path="MiniStreamingChatExt/MiniStreamingChatExt.csproj" />
   <Project Path="Similarities/Similarities.csproj" />
 </Solution>
