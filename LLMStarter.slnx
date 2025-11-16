@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Experimental/">
+    <Project Path="Speech/Speech.csproj" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
     <File Path="Readme.md" />
@@ -9,5 +12,4 @@
   <Project Path="MiniStreamingChat/MiniStreamingChat.csproj" />
   <Project Path="MiniStreamingChatExt/MiniStreamingChatExt.csproj" />
   <Project Path="Similarities/Similarities.csproj" />
-  <Project Path="Speech/Speech.csproj" />
 </Solution>
