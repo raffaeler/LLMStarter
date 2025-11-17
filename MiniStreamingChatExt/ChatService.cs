@@ -93,9 +93,9 @@ public class ChatService : BackgroundService
 
         ChatOptions options = new()
         {
-            MaxOutputTokens = 500,
-            Temperature = 0.7f,
-            TopP = 0.8f,
+            MaxOutputTokens = 1500,
+            //Temperature = 0.7f,   // not supported by gpt-5-nano
+            //TopP = 0.8f,
             FrequencyPenalty = 0,
             PresencePenalty = 0,
             Tools = _tools.Values.OfType<AITool>().ToList(),
@@ -190,7 +190,6 @@ public class ChatService : BackgroundService
                         $"A({usage.AdditionalCounts?.Select(a => a.Value).Sum() ?? 0})");
                 });
 
-
             if (sm.Completion?.Length > 0)
                 prompts.Add(new ChatMessage(ChatRole.Assistant, sm.Completion));
 
@@ -202,8 +201,6 @@ public class ChatService : BackgroundService
             Console.WriteLine();
 
             lastWasTool = false;
-
-
             if (sm.FinishReason == ChatFinishReason.ContentFilter)
             {
                 // Content filtered by the model
