@@ -12,17 +12,35 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
+/*
+This app needs the following environment variables (see launchSettings.json):
+- AZURE_MODEL_NAME
+- AZURE_SECRET_KEY
+- AZURE_ENDPOINT
+
+Never store the keys in the same folder of the code!
+The AZURE_SECRET_KEY is injected from the llmstarter.json file.
+
+llmstarter.json file format (simple dictionary):
+{
+ "key1": "....secret...",
+ "key2": "....secret..."
+}
+*/
+
 namespace ChatAndMCP;
 
 internal class Program
 {
     static async Task Main(string[] args)
     {
-        Utilities.InjectSecret();
-        var endpoint = Utilities.GetAzureEndpoint();
-        var secretKey = Utilities.GetAzureSecretKey();
-        var modelname = Utilities.GetAzureModelName();
+        // Inject the secret from a file into the environment variable
+        Utilities.SetSecretWithKey(@"H:\ai\_demosecrets\llmstarter.json",
+            "east-us-2", "AZURE_SECRET_KEY");
 
+        var endpoint = Utilities.GetEnv("AZURE_ENDPOINT");
+        var secretKey = Utilities.GetEnv("AZURE_SECRET_KEY");
+        var modelname = Utilities.GetEnv("AZURE_MODEL_NAME");
 
         var builder = Host.CreateApplicationBuilder();
         builder.Logging.AddConsole(options =>

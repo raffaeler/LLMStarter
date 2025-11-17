@@ -10,14 +10,19 @@ using Azure.AI.OpenAI;
 using OpenAI.Chat;
 
 /*
-
-This chat app needs the following environment variables:
+This app needs the following environment variables (see launchSettings.json):
 - AZURE_MODEL_NAME
 - AZURE_SECRET_KEY
 - AZURE_ENDPOINT
 
-The AZURE_SECRET_KEY can be injected from a file (see below)
+Never store the keys in the same folder of the code!
+The AZURE_SECRET_KEY is injected from the llmstarter.json file.
 
+llmstarter.json file format (simple dictionary):
+{
+ "key1": "....secret...",
+ "key2": "....secret..."
+}
 */
 
 namespace Minichat;
@@ -26,21 +31,8 @@ internal class Program
 {
     static async Task Main(string[] args)
     {
-        InjectSecret();
         var p = new Program();
         await p.Start();
-    }
-
-    private static void InjectSecret()
-    {
-        var secretFilename = @"H:\ai\_demosecrets\east-us-2.txt";
-        if (File.Exists(secretFilename))
-        {
-            var secret = File
-                    .ReadAllText(secretFilename)
-                    .Trim();
-            Environment.SetEnvironmentVariable("AZURE_SECRET_KEY", secret);
-        }
     }
 
     private JsonSerializerOptions _jsonOptions = new()
@@ -54,14 +46,17 @@ internal class Program
     /// </summary>
     private Task Start()
     {
+        // Inject the secret from a file into the environment variable
+        Utilities.SetSecretWithKey(@"H:\ai\_demosecrets\llmstarter.json",
+            "east-us-2", "AZURE_SECRET_KEY");
+
+        var endpoint = Utilities.GetEnv("AZURE_ENDPOINT");
+        var secretKey = Utilities.GetEnv("AZURE_SECRET_KEY");
+        var modelname = Utilities.GetEnv("AZURE_MODEL_NAME");
+
         Console.WriteLine("Minichat by Raffaele Rialdi");
         Console.WriteLine("");
         Console.WriteLine("Start chatting or type 'exit' to quit");
-
-        // read the required environment variables
-        var endpoint = GetAzureEndpoint();
-        var secretKey = GetAzureSecretKey();
-        var modelname = GetAzureModelName();
 
         var clientOptions = new AzureOpenAIClientOptions()
         {

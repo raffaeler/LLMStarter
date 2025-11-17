@@ -11,14 +11,19 @@ using OpenAI.Chat;
 using OpenAI.Embeddings;
 
 /*
-
-This chat app needs the following environment variables:
+This app needs the following environment variables (see launchSettings.json):
 - AZURE_EMBEDDINGS_MODEL_NAME
 - AZURE_EMBEDDINGS_SECRET_KEY
 - AZURE_EMBEDDINGS_ENDPOINT
 
-The AZURE_EMBEDDINGS_SECRET_KEY can be injected from a file (see below)
+Never store the keys in the same folder of the code!
+The AZURE_EMBEDDINGS_SECRET_KEY is injected from the llmstarter.json file.
 
+llmstarter.json file format (simple dictionary):
+{
+ "key1": "....secret...",
+ "key2": "....secret..."
+}
 */
 
 
@@ -28,41 +33,26 @@ internal class Program
 {
     static async Task Main(string[] args)
     {
-        InjectSecret();
         var p = new Program();
         await p.Start();
     }
-
-    private static void InjectSecret()
-    {
-        var secretFilename = @"H:\ai\_demosecrets\oai-raf-3.txt";
-        if (File.Exists(secretFilename))
-        {
-            var secret = File
-                    .ReadAllText(secretFilename)
-                    .Trim();
-            Environment.SetEnvironmentVariable("AZURE_EMBEDDINGS_SECRET_KEY", secret);
-        }
-    }
-
-    private JsonSerializerOptions _jsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    };
 
     /// <summary>
     /// Starts the chat
     /// </summary>
     private async Task Start()
     {
-        Console.WriteLine("Similarities by Raffaele Rialdi");
-        Console.WriteLine("");
+        // Inject the secret from a file into the environment variable
+        Utilities.SetSecretWithKey(@"H:\ai\_demosecrets\llmstarter.json",
+            "oai-raf-3", "AZURE_EMBEDDINGS_SECRET_KEY");
 
         // read the required environment variables
-        var endpoint = GetEmbeddingsAzureEndpoint();
-        var secretKey = GetAzureSecretKey();
-        var modelname = GetAzureEmbeddingsModelName();
+        var endpoint = Utilities.GetEnv("AZURE_EMBEDDINGS_ENDPOINT");
+        var secretKey = Utilities.GetEnv("AZURE_EMBEDDINGS_SECRET_KEY");
+        var modelname = Utilities.GetEnv("AZURE_EMBEDDINGS_MODEL_NAME");
+
+        Console.WriteLine("Similarities by Raffaele Rialdi");
+        Console.WriteLine("");
 
         var clientOptions = new AzureOpenAIClientOptions()
         {
@@ -187,14 +177,4 @@ internal class Program
         }
         return dotProduct / (MathF.Sqrt(norm1) * MathF.Sqrt(norm2));
     }
-
-
-    private string GetEmbeddingsAzureEndpoint()
-    => Environment.GetEnvironmentVariable("AZURE_EMBEDDINGS_ENDPOINT") ?? throw new Exception("AZURE_EMBEDDINGS_ENDPOINT not found");
-
-    private string GetAzureSecretKey()
-        => Environment.GetEnvironmentVariable("AZURE_EMBEDDINGS_SECRET_KEY") ?? throw new Exception("AZURE_EMBEDDINGS_SECRET_KEY not found");
-
-    private string GetAzureEmbeddingsModelName()
-        => Environment.GetEnvironmentVariable("AZURE_EMBEDDINGS_MODEL_NAME") ?? throw new Exception("AZURE_EMBEDDINGS_MODEL_NAME not found");
 }

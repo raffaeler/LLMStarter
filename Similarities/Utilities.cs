@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
-namespace ChatAndMCP.Helpers;
+namespace Similarities;
 
 internal static class Utilities
 {
@@ -34,7 +32,7 @@ internal static class Utilities
         content ??= new Dictionary<string, string>();
         content.Remove("_notes");
 
-        if (!content.TryGetValue(dictKey, out var secret))
+        if(!content.TryGetValue(dictKey, out var secret))
             throw new Exception($"The key {dictKey} was not found in the secret file {pathname}");
 
         Environment.SetEnvironmentVariable(env_name, secret);
@@ -44,5 +42,3 @@ internal static class Utilities
         => Environment.GetEnvironmentVariable(env_name)
             ?? throw new Exception($"{env_name} not found");
 }
-
-

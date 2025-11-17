@@ -6,29 +6,35 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace MinichatExt;
-
 /*
-
-This chat app needs the following environment variables:
+This app needs the following environment variables (see launchSettings.json):
 - AZURE_MODEL_NAME
 - AZURE_SECRET_KEY
 - AZURE_ENDPOINT
 
-The AZURE_SECRET_KEY can be injected from a file (see below)
+Never store the keys in the same folder of the code!
+The AZURE_SECRET_KEY is injected from the llmstarter.json file.
 
+llmstarter.json file format (simple dictionary):
+{
+ "key1": "....secret...",
+ "key2": "....secret..."
+}
 */
 
+namespace MinichatExt;
 
 internal class Program
 {
     static async Task Main(string[] args)
     {
-        InjectSecret();
-        var p = new Program();
-        var endpoint = p.GetAzureEndpoint();
-        var secretKey = p.GetAzureSecretKey();
-        var modelname = p.GetAzureModelName();
+        // Inject the secret from a file into the environment variable
+        Utilities.SetSecretWithKey(@"H:\ai\_demosecrets\llmstarter.json",
+            "east-us-2", "AZURE_SECRET_KEY");
+
+        var endpoint = Utilities.GetEnv("AZURE_ENDPOINT");
+        var secretKey = Utilities.GetEnv("AZURE_SECRET_KEY");
+        var modelname = Utilities.GetEnv("AZURE_MODEL_NAME");
 
         var host = Host.CreateDefaultBuilder(args)
             .ConfigureLogging(logging =>
@@ -55,31 +61,4 @@ internal class Program
         
         await app.RunAsync();
     }
-
-    private static void InjectSecret()
-    {
-        var secretFilename = @"H:\ai\_demosecrets\east-us-2.txt";
-        if (File.Exists(secretFilename))
-        {
-            var secret = File
-                    .ReadAllText(secretFilename)
-                    .Trim();
-            Environment.SetEnvironmentVariable("AZURE_SECRET_KEY", secret);
-        }
-    }
-
-    private JsonSerializerOptions _jsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    };
-
-    private string GetAzureEndpoint()
-        => Environment.GetEnvironmentVariable("AZURE_ENDPOINT") ?? throw new Exception("AZURE_ENDPOINT not found");
-
-    private string GetAzureSecretKey()
-        => Environment.GetEnvironmentVariable("AZURE_SECRET_KEY") ?? throw new Exception("AZURE_SECRET_KEY not found");
-
-    private string GetAzureModelName()
-        => Environment.GetEnvironmentVariable("AZURE_MODEL_NAME") ?? throw new Exception("AZURE_MODEL_NAME not found");
 }

@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
-namespace ChatAndMCP.Helpers;
+namespace MiniStreamingChat;
 
 internal static class Utilities
 {
@@ -43,6 +41,5 @@ internal static class Utilities
     public static string GetEnv(string env_name)
         => Environment.GetEnvironmentVariable(env_name)
             ?? throw new Exception($"{env_name} not found");
+
 }
-
-
