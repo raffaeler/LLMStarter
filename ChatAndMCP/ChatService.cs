@@ -24,6 +24,11 @@ namespace ChatAndMCP;
 /// </summary>
 internal class ChatService : BackgroundService
 {
+    /// <summary>
+    /// When true, the colors for odd and even tokens are alternated
+    /// </summary>
+    private const bool AlternatedColors = false;
+
     private readonly ILogger _logger;
     private readonly IServiceProvider _serviceProvider;
     private readonly IHostApplicationLifetime _lifetime;
@@ -250,7 +255,7 @@ internal class ChatService : BackgroundService
                 onOutOfBandMessage: Console.WriteLine,
                 onToken: (token, isEven) =>
                 {
-                    Console.ForegroundColor = isEven ? evenColor : oddColor;
+                    Console.ForegroundColor = AlternatedColors && isEven ? evenColor : oddColor;
                     Console.Write(token);
                 },
                 onUsage: usage =>

@@ -45,6 +45,6 @@ internal static class Prompts
 
 
     public static string GetPromptToBrowseTheInternet() => """
-        Provide a short update on the latest news between China and Russia today.
+        Provide the lastest top 2 news about Formula 1 current championship.
         """;
 }
