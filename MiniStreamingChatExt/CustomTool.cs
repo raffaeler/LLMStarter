@@ -6,7 +6,8 @@ public class CustomTool
 {
     [Description("Reverse a string")]
     [return: Description("The reversed string")]
-    public string ReverseString([Description("The string to reverse")] string text) => new string(text.Reverse().ToArray());
+    public string ReverseString([Description("The string to reverse")] string text)
+        => new string(text.Reverse().ToArray());
 
 
     [Description("Make the string uppercase")]
