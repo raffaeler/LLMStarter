@@ -44,6 +44,12 @@ internal class ChatService : BackgroundService
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
     };
 
+    private ConsoleColor _currentColor = Console.ForegroundColor;
+    private ConsoleColor _evenColor = ConsoleColor.Yellow;
+    private ConsoleColor _oddColor = ConsoleColor.Green;
+    private ConsoleColor _usageColor = ConsoleColor.Cyan;
+    private ConsoleColor _systemColor = ConsoleColor.Magenta;
+
     private McpClientApp _mcpClientApp;
 
     //private static Func<string, Dictionary<string, object?>?> _toolsArgumentParser =
@@ -71,14 +77,29 @@ internal class ChatService : BackgroundService
     protected override async Task ExecuteAsync(
         CancellationToken cancellationToken = default)
     {
-        await _mcpClientFactoryService.StartAll(_mcpClientApp.GetMcpClientOptions);
+        Console.WriteLine("MCP powered chat, by Raffaele Rialdi");
+        Console.ForegroundColor = _evenColor;
+        Console.Write("Loading MCP Servers took: ");
 
-        Console.WriteLine("Minimal Chat also acting as MCP Client, by Raffaele Rialdi");
-        Console.WriteLine("");
+        Stopwatch sw = new();
+        sw.Start();
+        await _mcpClientFactoryService.StartAll(_mcpClientApp.GetMcpClientOptions);
+        var mcpLoadElapsed = sw.Elapsed;
+        sw.Stop();
+        Console.WriteLine($"{mcpLoadElapsed.TotalMilliseconds}ms");
+        Console.ForegroundColor = _currentColor;
+        Console.WriteLine();
+
         Console.WriteLine("Start chatting or type 'exit' to quit");
 
+        Console.ForegroundColor = _systemColor;
         string? systemPrompt = GetOptionalSystemPrompt();
+        Console.ForegroundColor = _currentColor;
+        Console.WriteLine();
 
+        Console.ForegroundColor = _evenColor;
+        Console.Write($"Loading tools from the MCPs took:");
+        sw.Restart();
         foreach (var proxy in _mcpClientFactoryService.Proxies)
         {
             if (proxy.McpClient != null)
@@ -125,6 +146,12 @@ internal class ChatService : BackgroundService
                 }
             }
         }
+
+        mcpLoadElapsed = sw.Elapsed;
+        sw.Stop();
+        Console.WriteLine($"{mcpLoadElapsed.TotalMilliseconds}ms");
+        Console.ForegroundColor = _currentColor;
+        Console.WriteLine();
 
         if (systemPrompt != null)
         {
@@ -204,16 +231,11 @@ internal class ChatService : BackgroundService
             prompts.Add(new ChatMessage(ChatRole.System, systemprompt));
         }
 
-        var currentColor = Console.ForegroundColor;
-        var evenColor = ConsoleColor.Yellow;
-        var oddColor = ConsoleColor.Green;
-        var usageColor = ConsoleColor.Cyan;
-
         string answer = "";
         bool lastWasTool = false;
         do
         {
-            Console.ForegroundColor = currentColor;
+            Console.ForegroundColor = _currentColor;
             if (!lastWasTool)
             {
                 Console.Write("You: ");
@@ -260,12 +282,12 @@ internal class ChatService : BackgroundService
                 onOutOfBandMessage: Console.WriteLine,
                 onToken: (token, isEven) =>
                 {
-                    Console.ForegroundColor = AlternatedColors && isEven ? evenColor : oddColor;
+                    Console.ForegroundColor = AlternatedColors && isEven ? _evenColor : _oddColor;
                     Console.Write(token);
                 },
                 onUsage: usage =>
                 {
-                    Console.ForegroundColor = usageColor;
+                    Console.ForegroundColor = _usageColor;
                     Console.WriteLine(Environment.NewLine +
                         $"Usage: T={usage.TotalTokenCount} = " +
                         $"I({usage.InputTokenCount}) + " +
@@ -279,7 +301,7 @@ internal class ChatService : BackgroundService
             if (sm.ToolCalls.Count > 0)
                 prompts.Add(new ChatMessage(ChatRole.Assistant, sm.ToolCalls));
 
-            Console.ForegroundColor = currentColor;
+            Console.ForegroundColor = _currentColor;
             Console.WriteLine();
 
             lastWasTool = false;

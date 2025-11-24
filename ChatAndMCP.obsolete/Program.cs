@@ -34,6 +34,13 @@ internal class Program
 {
     static async Task Main(string[] args)
     {
+        Console.WriteLine("This example has been improved in ChatAndMultipleMcps");
+        Console.WriteLine("which has dramatically simplified its structure.");
+        Console.WriteLine("Avoid building new code with ChatAndMCP sample.");
+        Console.WriteLine();
+        Console.ReadKey();
+        Console.Clear();
+
         // Inject the secret from a file into the environment variable
         Utilities.SetSecretWithKey(@"H:\ai\_demosecrets\llmstarter.json",
             "east-us-2", "AZURE_SECRET_KEY");

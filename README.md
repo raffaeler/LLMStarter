@@ -16,3 +16,15 @@ In the source code there are comments explaining how to set-up the configuration
 
 The code using Microsoft.Extensions.AI can be easily modified to access Ollama or other compliant offline or online providers.
 
+## MCP Support
+
+Initially the solution included the `ChatAndMCP` which is now obsolete and replaced by the `ChatAndMultipleMcps` project.
+
+For some time, the old `ChatAndMCP` will still be part of the repository but excluded from the solution. Later on, it will be removed from the repository as well.
+
+The project `McpClientUtilities` is a generic library providing utilities and helpers to simplify the development of applications making use of in-process and out-of-process MCP servers loaded from JSON configuration files. Refer to the README.md in the project file for more details.
+
+
+
+ 
+

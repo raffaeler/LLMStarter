@@ -45,11 +45,25 @@ internal class Program
         var secretKey = Utilities.GetEnv("AZURE_SECRET_KEY");
         var modelname = Utilities.GetEnv("AZURE_MODEL_NAME");
 
-        var builder = Host.CreateApplicationBuilder();
-        builder.Logging.AddConsole(options =>
+        Console.WriteLine("Enter to continue without verbose logging");
+        Console.WriteLine("V     to enable verbose logging");
+        bool isVerbose = false;
+        var key = Console.ReadKey();
+        if (key.Key == ConsoleKey.V)
         {
-            options.LogToStandardErrorThreshold = LogLevel.Trace;
-        });
+            isVerbose = true;
+        }
+        Console.Clear();
+
+        var builder = Host.CreateApplicationBuilder();
+        builder.Logging.ClearProviders();
+        if (isVerbose)
+        {
+            builder.Logging.AddConsole(options =>
+            {
+                options.LogToStandardErrorThreshold = LogLevel.Trace;
+            });
+        }
 
         builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
 
