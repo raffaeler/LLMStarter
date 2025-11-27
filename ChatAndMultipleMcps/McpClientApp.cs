@@ -37,6 +37,10 @@ internal class McpClientApp
         notificationHandlers[NotificationMethods.LoggingMessageNotification] =
             LoggingNotificationsHandler;
 
+        Func<ListRootsRequestParams?,
+            CancellationToken,
+            ValueTask<ListRootsResult>>? rootsHandler = null; // RootsHandler;
+
         McpClientOptions clientOptions = new()
         {
             InitializationTimeout = TimeSpan.FromSeconds(30),
@@ -63,7 +67,7 @@ internal class McpClientApp
             Handlers = new McpClientHandlers()
             {
                 NotificationHandlers = notificationHandlers,
-                RootsHandler = RootsHandler,
+                RootsHandler = rootsHandler,
                 SamplingHandler = SamplingHandler,
                 ElicitationHandler = ElicitationHandlerQA,
             },
@@ -72,8 +76,9 @@ internal class McpClientApp
         return ValueTask.FromResult(clientOptions);
     }
 
-    public ValueTask<ListRootsResult> RootsHandler(ListRootsRequestParams? listRootsRequestParams,
-CancellationToken cancellationToken)
+    public ValueTask<ListRootsResult> RootsHandler(
+        ListRootsRequestParams? listRootsRequestParams,
+        CancellationToken cancellationToken)
     {
         Console.WriteLine($"[RootsHandler invoked]");
         var roots = new ListRootsResult()
@@ -82,8 +87,10 @@ CancellationToken cancellationToken)
             [
                 new Root()
                 {
-                    Uri = "my:/root1",
-                    Name = "Root 1",
+                    //Uri = "https://formula1.com",
+                    //Uri = "https://www.gptoday.com/",
+                    Uri = "my://url",
+                    Name = "some-name",
                 }
             ],
         };
