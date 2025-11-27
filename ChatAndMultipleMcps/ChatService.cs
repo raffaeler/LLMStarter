@@ -83,7 +83,8 @@ internal class ChatService : BackgroundService
 
         Stopwatch sw = new();
         sw.Start();
-        await _mcpClientFactoryService.StartAll(_mcpClientApp.GetMcpClientOptions);
+        await _mcpClientFactoryService.StartAll(
+            _mcpClientApp.GetMcpClientOptions);
         var mcpLoadElapsed = sw.Elapsed;
         sw.Stop();
         Console.WriteLine($"{mcpLoadElapsed.TotalMilliseconds}ms");
@@ -104,6 +105,12 @@ internal class ChatService : BackgroundService
         {
             if (proxy.McpClient != null)
             {
+                if(proxy.McpClient.ServerCapabilities.Logging != null)
+                {
+                    Console.WriteLine($"Enabling logging for MCP {proxy.Name}");
+                    await proxy.McpClient.SetLoggingLevel(LoggingLevel.Debug);
+                }
+
                 if (proxy.McpClient.ServerCapabilities.Tools != null)
                 {
                     var clientTools = await proxy.McpClient.ListToolsAsync();
@@ -160,20 +167,11 @@ internal class ChatService : BackgroundService
             Console.WriteLine();
         }
 
-        //if (_inMemoryMcpService.Client != null)
-        //{
-        //    var clientTools = await _inMemoryMcpService.Client.ListToolsAsync();
-        //    _tools = clientTools.ToDictionary(c => c.Name, c => (AIFunction)c);
-
-        //    //var resources = await _inMemoryMcpService.Client.ListResourcesAsync();
-        //    //_resources = resources.ToDictionary(r => r.Name, r => r)
-        //}
-
         ChatOptions options = new()
         {
             MaxOutputTokens = 5500,
-            Temperature = 0.7f,
-            TopP = 0.8f,
+            //Temperature = 0.7f,   // not supported by gpt-5-nano
+            //TopP = 0.8f,
             FrequencyPenalty = 0,
             PresencePenalty = 0,
             Tools = _tools.Values.OfType<AITool>().ToList(),

@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
 
 namespace McpClientUtilities;
 
@@ -61,8 +62,8 @@ public class McpClientFactoryService : IAsyncDisposable
     /// <returns>A task that represents the asynchronous operation
     /// of starting all proxies. The task completes when all proxies
     /// have been started.</returns>
-    public async Task StartAll(Func<McpConfiguration, ValueTask<McpClientOptions>>
-        mcpClientOptionsFunc)
+    public async Task StartAll(
+        Func<McpConfiguration, ValueTask<McpClientOptions>> mcpClientOptionsFunc)
     {
         if(_serviceProvider == null)
         {
@@ -124,7 +125,9 @@ public class McpClientFactoryService : IAsyncDisposable
         {
             var mcpClientOptions = await mcpClientOptionsFunc(configuration);
             McpProxy proxy = new(_loggerFactory);
-            tasks.Add(proxy.Start(mcpClientOptions, configuration, serverInput, serverOutput));
+            tasks.Add(proxy.Start(mcpClientOptions,
+                configuration,
+                serverInput, serverOutput));
         }
 
         await Task.WhenAll(tasks);

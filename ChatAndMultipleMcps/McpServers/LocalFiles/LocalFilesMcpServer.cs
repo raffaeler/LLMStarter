@@ -13,7 +13,7 @@ using ModelContextProtocol.Server;
 
 namespace ChatAndMultipleMcps.McpServers.LocalFiles;
 
-internal class LocalFilesMcpServer// : IMyMcpServer
+internal class LocalFilesMcpServer
 {
     private readonly LocalFilesMcpServerConfiguration _localFilesMcpServerConfiguration;
     private readonly ILogger<LocalFilesMcpServer> _logger;
@@ -70,7 +70,8 @@ internal class LocalFilesMcpServer// : IMyMcpServer
     [McpServerTool(Name = "localFiles_getDocument")]
     [Description("Get the content of a file, given its filename")]
     [return: Description("The content of the document")]
-    public async Task<string> GetDocument(McpServer server,
+    public async Task<string> GetDocument(
+        McpServer server,
         [Description("The name of the file, including the extension")]
         string filename)
     {

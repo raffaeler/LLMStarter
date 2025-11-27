@@ -49,6 +49,7 @@ public class McpProxy : IAsyncDisposable
 
         McpClient = await McpClient.CreateAsync(transport,
             mcpClientOptions, _loggerFactory, default);
+        
         Name = mcpConfiguration.Name;
         ErrorMessage = string.Empty;
         return true;
@@ -69,6 +70,7 @@ public class McpProxy : IAsyncDisposable
 
         McpClient = await McpClient.CreateAsync(transport,
             mcpClientOptions, _loggerFactory, default);
+
         Name = mcpConfiguration.Name;
         ErrorMessage = string.Empty;
         return true;

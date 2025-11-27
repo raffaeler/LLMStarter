@@ -13,7 +13,7 @@ using ModelContextProtocol.Server;
 
 namespace ChatAndMultipleMcps.McpServers.Summary;
 
-internal class SummaryMcpServer// : IMyMcpServer
+internal class SummaryMcpServer
 {
     private readonly ILogger<SummaryMcpServer> _logger;
 
@@ -51,7 +51,8 @@ internal class SummaryMcpServer// : IMyMcpServer
     [McpServerTool(Name = "summary_createSummary")]
     [Description("Creates a summary of the given text")]
     [return: Description("A summary generated of the provided text")]
-    public async Task<IEnumerable<string>> CreateSummary(McpServer server,
+    public async Task<IEnumerable<string>> CreateSummary(
+        McpServer server,
         [Description("Describe the desired summary style.")]
         string style,
         [Description("Specifies the length of the resulting document.")]
@@ -71,18 +72,18 @@ internal class SummaryMcpServer// : IMyMcpServer
             {
                 SystemPrompt = SystemPrompt,
                 Messages =
-            [
-                new SamplingMessage()
-                {
-                    Role = Role.User,
-                    Content =new TextContentBlock()
+                [
+                    new SamplingMessage()
                     {
-                        Text = GetUserPrompt(style, length, document)
+                        Role = Role.User,
+                        Content =new TextContentBlock()
+                        {
+                            Text = GetUserPrompt(style, length, document)
+                        },
                     },
-                },
-            ],
+                ],
                 MaxTokens = 300,
-                Temperature = 0.7f,
+                //Temperature = 0.7f,   // not supported by gpt-5-nano
                 IncludeContext = ContextInclusion.ThisServer,
             }, CancellationToken.None);
 
@@ -114,7 +115,7 @@ internal class SummaryMcpServer// : IMyMcpServer
         ChatOptions options = new()
         {
             MaxOutputTokens = 300,
-            Temperature = 0.7f,
+            //Temperature = 0.7f,   // not supported by gpt-5-nano
         };
 
         var messages = GetSummaryPrompt(style, length, document);

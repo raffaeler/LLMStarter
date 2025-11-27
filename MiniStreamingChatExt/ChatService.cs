@@ -27,9 +27,6 @@ public class ChatService : BackgroundService
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
     };
 
-    //private static Func<string, Dictionary<string, object?>?> _toolsArgumentParser =
-    //    static json => JsonSerializer.Deserialize<Dictionary<string, object?>>(json, AIJsonUtilities.DefaultOptions);
-
     public ChatService( 
         ILogger<ChatService> logger,
         IHostApplicationLifetime lifetime,

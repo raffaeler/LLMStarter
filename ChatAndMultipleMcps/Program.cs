@@ -1,4 +1,5 @@
 ﻿
+using System.ClientModel;
 using System.ClientModel.Primitives;
 using System.IO.Pipelines;
 
@@ -14,6 +15,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+
+using OpenAI;
 
 /*
 This app needs the following environment variables (see launchSettings.json):
@@ -35,15 +38,16 @@ namespace ChatAndMultipleMcps;
 
 internal class Program
 {
+    private static string _secretsFile = @"H:\ai\_demosecrets\llmstarter.json";
+
     static async Task Main(string[] args)
     {
-        // Inject the secret from a file into the environment variable
-        Utilities.SetSecretWithKey(@"H:\ai\_demosecrets\llmstarter.json",
-            "east-us-2", "AZURE_SECRET_KEY");
+        IChatClient azureClient = GetAzureClient();
+        IChatClient openaiClient = GetOpenAIClient();
+        IChatClient deepseekClient = GetDeepSeekClient();
 
-        var endpoint = Utilities.GetEnv("AZURE_ENDPOINT");
-        var secretKey = Utilities.GetEnv("AZURE_SECRET_KEY");
-        var modelname = Utilities.GetEnv("AZURE_MODEL_NAME");
+        IChatClient mainClient = azureClient;
+        IChatClient summarySamplingClient = openaiClient;
 
         Console.WriteLine("Enter to continue without verbose logging");
         Console.WriteLine("V     to enable verbose logging");
@@ -72,39 +76,8 @@ internal class Program
             builder.Configuration.GetSection("LocalFilesMcpServer"));
         #endregion
 
-        #region main client configuration
-        // the main client is the one used by the ChatService
-        // to interact with the LLM
-        var mainAzureOpenAIClient = new Azure.AI.OpenAI.AzureOpenAIClient(
-            new Uri(endpoint),
-            new System.ClientModel.ApiKeyCredential(secretKey),
-            new Azure.AI.OpenAI.AzureOpenAIClientOptions()
-            {
-                NetworkTimeout = TimeSpan.FromMinutes(5),
-                RetryPolicy = new ClientRetryPolicy(3),
-            });
-
-        var mainIChatClient = mainAzureOpenAIClient.GetChatClient(modelname)
-            .AsIChatClient();
-        builder.Services.AddKeyedChatClient("main", mainIChatClient);
-        #endregion
-
-        #region sampling client configuration
-        // The sampling client is used by the MCP servers
-        // to use an LLM provided by the client
-        var summarySamplingModelName = modelname;   // this can be a different model!
-        var summarySamplingAzureOpenAIClient = new Azure.AI.OpenAI.AzureOpenAIClient(
-            new Uri(endpoint),
-            new System.ClientModel.ApiKeyCredential(secretKey),
-            new Azure.AI.OpenAI.AzureOpenAIClientOptions()
-            {
-                NetworkTimeout = TimeSpan.FromMinutes(5),
-                RetryPolicy = new ClientRetryPolicy(3),
-            });
-
-        var samplingIChatClient = summarySamplingAzureOpenAIClient.GetChatClient(summarySamplingModelName).AsIChatClient();
-        builder.Services.AddKeyedChatClient("SummarySamplingClient", samplingIChatClient);
-        #endregion
+        builder.Services.AddKeyedChatClient("main", mainClient);
+        builder.Services.AddKeyedChatClient("SummarySamplingClient", summarySamplingClient);
 
         builder.Services.AddSingleton<McpClientFactoryService>();
 
@@ -115,39 +88,67 @@ internal class Program
             .WithTools<SummaryMcpServer>()
             .WithTools<AskUserMcpServer>();
 
-        //// Add an external MCP server (Playwright)
-        //builder.Services.AddSingleton(new ExternalStdioMcp()
-        //{
-        //    // This requires the bridge to be added to Chrome (manually):
-        //    // https://github.com/microsoft/playwright-mcp/releases
-        //    // The first time you run the MCP server, it will ask to
-        //    // allow the browser to be remote controlled.
-        //    // It will also show a "token" that is needed to avoid
-        //    // to manually allow the operation every time.
-        //    // - Copy the token in the browser
-        //    // - Open the launchSettings.json file and add it to the
-        //    //   "environmentVariables" section as the value of
-        //    //   "PLAYWRIGHT_MCP_EXTENSION_TOKEN"
-        //    Name = "PlaywrightMcp",
-        //    Command = "npx",
-        //    Arguments =
-        //    [
-        //        "@playwright/mcp@latest",
-        //        //"@playwright/mcp@next",
-        //        "--browser",
-        //        "chrome",                   // use Chrome
-        //        "--extension",              // connects to the bridge extension in chrome
-        //    ],
-        //    Type = "stdio",
-        //});
-
-
-        //// McpProxyFactoryService is used to bootstrap the MCP servers
-        //builder.Services.AddSingleton<McpProxyFactoryService>();
-
         // ChatService manages the conversation with the interactive user
         builder.Services.AddHostedService<ChatService>();
 
         await builder.Build().RunAsync();
     }
+
+    private static IChatClient GetAzureClient()
+    {
+        Utilities.SetSecretWithKey(_secretsFile, "east-us-2", "AZURE_SECRET_KEY");
+        var azureEndpoint = Utilities.GetEnv("AZURE_ENDPOINT");
+        var azureSecretKey = Utilities.GetEnv("AZURE_SECRET_KEY");
+        var azureModelname = Utilities.GetEnv("AZURE_MODEL_NAME");
+        var azureClient = new Azure.AI.OpenAI.AzureOpenAIClient(
+            new Uri(azureEndpoint),
+            new ApiKeyCredential(azureSecretKey),
+            new Azure.AI.OpenAI.AzureOpenAIClientOptions()
+            {
+                NetworkTimeout = TimeSpan.FromMinutes(5),
+                RetryPolicy = new ClientRetryPolicy(3),
+            })
+            .GetChatClient(azureModelname)
+            .AsIChatClient();
+        return azureClient;
+    }
+
+    private static IChatClient GetOpenAIClient()
+    {
+        Utilities.SetSecretWithKey(_secretsFile, "openai-raf", "OPENAI_SECRET_KEY");
+        var openaiEndpoint = Utilities.GetEnv("OPENAI_ENDPOINT");
+        var openaiSecretKey = Utilities.GetEnv("OPENAI_SECRET_KEY");
+        var modelname = Utilities.GetEnv("OPENAI_MODEL_NAME");
+        var openAIClient = new OpenAIClient(
+            new ApiKeyCredential(openaiSecretKey),
+            new OpenAIClientOptions()
+            {
+                Endpoint = new Uri(openaiEndpoint),
+                NetworkTimeout = TimeSpan.FromMinutes(5),
+                RetryPolicy = new ClientRetryPolicy(3),
+            })
+            .GetChatClient(modelname)
+            .AsIChatClient();
+        return openAIClient;
+    }
+
+    private static IChatClient GetDeepSeekClient()
+    {
+        Utilities.SetSecretWithKey(_secretsFile, "deepseek-raf", "DEEPSEEK_SECRET_KEY");
+        var deepseekEndpoint = Utilities.GetEnv("DEEPSEEK_ENDPOINT");
+        var deepseekSecretKey = Utilities.GetEnv("DEEPSEEK_SECRET_KEY");
+        var deepseekModelname = Utilities.GetEnv("DEEPSEEK_MODEL_NAME");
+        var deepseekClient = new OpenAIClient(
+            new ApiKeyCredential(deepseekSecretKey),
+            new OpenAIClientOptions()
+            {
+                Endpoint = new Uri(deepseekEndpoint),
+                NetworkTimeout = TimeSpan.FromMinutes(5),
+                RetryPolicy = new ClientRetryPolicy(3),
+            })
+            .GetChatClient(deepseekModelname)
+            .AsIChatClient();
+        return deepseekClient;
+    }
+
 }

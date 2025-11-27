@@ -98,7 +98,8 @@ internal class McpClientApp
     }
 
     public ValueTask LoggingNotificationsHandler(
-        JsonRpcNotification notification, CancellationToken cancellationToken)
+        JsonRpcNotification notification,
+        CancellationToken cancellationToken)
     {
         Console.WriteLine($"[Notification received: {notification.Method}]");
         if (JsonSerializer.Deserialize<LoggingMessageNotificationParams>(notification.Params) is { } ln)

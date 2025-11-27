@@ -14,7 +14,7 @@ using ModelContextProtocol.Server;
 
 namespace ChatAndMultipleMcps.McpServers.AskUser;
 
-internal class AskUserMcpServer// : IMyMcpServer
+internal class AskUserMcpServer
 {
     private readonly ILogger<AskUserMcpServer> _logger;
 
@@ -48,7 +48,8 @@ internal class AskUserMcpServer// : IMyMcpServer
         Use this tool to ask a question about their last request whenever you need more information or a clarification from the user.
         """)]
     [return: Description("The answer to the question, provided by the user")]
-    public async Task<string> AskQuestion(McpServer server,
+    public async Task<string> AskQuestion(
+        McpServer server,
         [Description("The question asked to the user")]
         string question)
     {
@@ -78,7 +79,9 @@ internal class AskUserMcpServer// : IMyMcpServer
         };
 
 
-        ElicitResult result = await server.ElicitAsync(elicitRequestParams, default);
+        ElicitResult result = await server.ElicitAsync(
+            elicitRequestParams, default);
+
         if (result.Action == "decline")
         {
             return "Error: the user declined to answer";
@@ -94,7 +97,8 @@ internal class AskUserMcpServer// : IMyMcpServer
 
         Debug.Assert(result.Action == "accept");
 
-        IDictionary<string, JsonElement>? resultDictionary = result.Content;
+        IDictionary<string, JsonElement>? resultDictionary =
+            result.Content;
 
         if (resultDictionary == null ||
             !resultDictionary.TryGetValue("answer", out var answerElement))
