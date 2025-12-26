@@ -76,10 +76,13 @@ internal class SummaryMcpServer
                     new SamplingMessage()
                     {
                         Role = Role.User,
-                        Content =new TextContentBlock()
-                        {
-                            Text = GetUserPrompt(style, length, document)
-                        },
+                        Content =
+                        [
+                            new TextContentBlock()
+                            {
+                                Text = GetUserPrompt(style, length, document)
+                            },
+                        ],
                     },
                 ],
                 MaxTokens = 300,
@@ -87,13 +90,15 @@ internal class SummaryMcpServer
                 IncludeContext = ContextInclusion.ThisServer,
             }, CancellationToken.None);
 
-        var textContent = result.Content as TextContentBlock;
-        if (textContent == null)
+        var textContents = result.Content.OfType<TextContentBlock>()
+            .Select(t => t.Text);
+
+        if (!textContents.Any())
         {
             return ["The generated content is not textual"];
         }
 
-        return [textContent.Text];
+        return textContents;
     }
 
     /*

@@ -108,7 +108,7 @@ internal class ChatService : BackgroundService
                 if(proxy.McpClient.ServerCapabilities.Logging != null)
                 {
                     Console.WriteLine($"Enabling logging for MCP {proxy.Name}");
-                    await proxy.McpClient.SetLoggingLevel(LoggingLevel.Debug);
+                    await proxy.McpClient.SetLoggingLevelAsync(LoggingLevel.Debug);
                 }
 
                 if (proxy.McpClient.ServerCapabilities.Tools != null)

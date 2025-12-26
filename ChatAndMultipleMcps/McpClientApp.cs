@@ -146,10 +146,13 @@ internal class McpClientApp
             {
                 Model = string.Empty,
                 Role = Role.Assistant,
-                Content = new TextContentBlock()
-                {
-                    Text = "The input prompts to the model are missing",
-                },
+                Content = 
+                [
+                    new TextContentBlock()
+                    {
+                        Text = "The input prompts to the model are missing",
+                    },
+                ],
                 StopReason = "endTurn", // "endTurn" or "stopSequence" or "stopToken"
             };
         }
@@ -167,11 +170,13 @@ internal class McpClientApp
             {
                 Model = string.Empty,
                 Role = Role.Assistant,
-                Content = new TextContentBlock()
-                {
-                    Text = "Invalid LLM response: message count != 1",
-                },
-
+                Content = 
+                [
+                    new TextContentBlock()
+                    {
+                        Text = "Invalid LLM response: message count != 1",
+                    },
+                ],
                 StopReason = "endTurn", // "endTurn" or "stopSequence" or "stopToken"
             };
         }

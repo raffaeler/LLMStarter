@@ -5,6 +5,7 @@ using McpClientUtilities.Internal;
 
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualBasic;
 
 using ModelContextProtocol;
 using ModelContextProtocol.Client;
@@ -168,9 +169,11 @@ public static class McpClientUtilities
 
         List<ChatMessage> messages =
             (from sm in requestParams.Messages
-             let aiContent = sm.Content.ToAIContent()
+             let aiContent = sm.Content.Select(s => s.ToAIContent()).ToList()
              where aiContent is not null
-             select new ChatMessage(sm.Role == Role.Assistant ? ChatRole.Assistant : ChatRole.User, [aiContent]))
+             select new ChatMessage(
+                 sm.Role == Role.Assistant ? ChatRole.Assistant : ChatRole.User,
+                 aiContent))
             .ToList();
 
         return (messages, options);
@@ -189,8 +192,8 @@ public static class McpClientUtilities
         // in any of the response messages, or we'll use all the text from them concatenated, otherwise.
 
         ChatMessage? lastMessage = chatResponse.Messages.LastOrDefault();
+        IList<AIContent> contents = lastMessage?.Contents ?? [];
 
-        ContentBlock? content = null;
         //if (lastMessage is not null)
         //{
         //    foreach (var lmc in lastMessage.Contents)
@@ -204,7 +207,7 @@ public static class McpClientUtilities
 
         return new()
         {
-            Content = content ?? new TextContentBlock { Text = lastMessage?.Text ?? string.Empty },
+            Content = contents.Select(c => c.ToContentBlock()).ToList(),
             Model = chatResponse.ModelId ?? "unknown",
             Role = lastMessage?.Role == ChatRole.User ? Role.User : Role.Assistant,
             StopReason = chatResponse.FinishReason == ChatFinishReason.Length ? "maxTokens" : "endTurn",
