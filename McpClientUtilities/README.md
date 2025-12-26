@@ -13,7 +13,7 @@ Similarly to how Claude Desktop, Visual Studio Code and ChatGPT Desktop applicat
 - `StdioClientTransportConverter`: A custom coverter to load the configuration of an MCP Server using the Stdio transport.
 - `InProcClientTransportOptions`: An internal class allowing to treat the in-process servers as they were external servers.
 - `InProcessPipes`: A small service injected in the DI container to manage the Pipes used for in-process communication.
-- `McpClientFactoryService`: The service that is used to create the MCP clients wrapped by `McpProxy` instances. This class exposes a `StartAll` method that allow to return a different instance of `McpClientOptions` for each MCP Server. The MCP Servers are started in parallel to avoid delays when many servers are configured.
+- `McpClientFactoryService` now renamed to `McpProxyFactoryService`: The service that is used to create the MCP clients wrapped by `McpProxy` instances. This class exposes a `StartAll` method that allow to return a different instance of `McpClientOptions` for each MCP Server. The MCP Servers are started in parallel to avoid delays when many servers are configured.
 - `McpClientUtilities`: A static class exposing the methods to load the configuration from the JSON files.
 - `McpConfiguration`: The class representing the configuration of the MCP servers.
 - `McpProxy`: A wrapper around the `McpClient` that exposes the `McpClient` as well as the name of the server and an error string that is set if the server failed to start.

@@ -14,23 +14,23 @@ using ModelContextProtocol.Protocol;
 
 namespace McpClientUtilities;
 
-public class McpClientFactoryService : IAsyncDisposable
+public class McpProxyFactoryService : IAsyncDisposable
 {
     private readonly IServiceProvider? _serviceProvider;
     private readonly ILoggerFactory? _loggerFactory;
-    private readonly ILogger<McpClientFactoryService>? _logger;
+    private readonly ILogger<McpProxyFactoryService>? _logger;
     private readonly string? _mcpConfigurationDirectory;
 
     private List<McpProxy> _proxies = [];
 
-    public McpClientFactoryService(
+    public McpProxyFactoryService(
         IServiceProvider? serviceProvider,
         ILoggerFactory? loggerFactory,
         IConfiguration? configuration)
     {
         _serviceProvider = serviceProvider;
         _loggerFactory = loggerFactory;
-        _logger = loggerFactory?.CreateLogger<McpClientFactoryService>();
+        _logger = loggerFactory?.CreateLogger<McpProxyFactoryService>();
 
         _mcpConfigurationDirectory = configuration?["mcpConfigurationDirectory"];
     }

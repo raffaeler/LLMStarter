@@ -79,7 +79,7 @@ internal class Program
         builder.Services.AddKeyedChatClient("main", mainClient);
         builder.Services.AddKeyedChatClient("SummarySamplingClient", summarySamplingClient);
 
-        builder.Services.AddSingleton<McpClientFactoryService>();
+        builder.Services.AddSingleton<McpProxyFactoryService>();
 
         builder.Services
             .AddMcpServer()

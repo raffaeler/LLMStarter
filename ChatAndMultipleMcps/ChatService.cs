@@ -34,7 +34,7 @@ internal class ChatService : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly IHostApplicationLifetime _lifetime;
     //private readonly IChatClient _client;
-    private readonly McpClientFactoryService _mcpClientFactoryService;
+    private readonly McpProxyFactoryService _mcpClientFactoryService;
     private Dictionary<string, AIFunction> _tools = new();
     private Dictionary<string, AIFunction> _resources = new();
     private Dictionary<string, AIFunction> _prompts = new();
@@ -60,7 +60,7 @@ internal class ChatService : BackgroundService
         IServiceProvider serviceProvider,
         IHostApplicationLifetime lifetime,
         //IChatClient client,
-        McpClientFactoryService mcpFactoryService)
+        McpProxyFactoryService mcpFactoryService)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
