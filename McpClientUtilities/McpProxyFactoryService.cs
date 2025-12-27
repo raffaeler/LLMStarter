@@ -79,7 +79,7 @@ public class McpProxyFactoryService : IAsyncDisposable
 
         // we always add the in-process configuration to create
         // one proxy (and MCP Client) for all the local functions
-        configurations.Add(McpConfiguration.InProcess);
+        configurations.Insert(0, McpConfiguration.InProcess);
 
         List<Task> tasks = new();
         foreach (var configuration in configurations)
