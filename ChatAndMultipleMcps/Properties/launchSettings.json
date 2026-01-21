@@ -4,7 +4,7 @@
             "commandName": "Project",
             "environmentVariables": {
                 "AZURE_ENDPOINT": "https://oai-eastus-2.openai.azure.com",
-                "AZURE_MODEL_NAME": "gpt-4-32k",
+                "AZURE_MODEL_NAME": "gpt-5-mini",
 
                 "OPENAI_ENDPOINT": "https://api.openai.com/v1",
                 "OPENAI_MODEL_NAME": "gpt-5-nano",

@@ -18,7 +18,8 @@ internal static class Prompts
     /// </summary>
     /// <returns></returns>
     public static string GetPromptWithDocument() => """
-        Make a very brief summary of the following document, explained for children:
+        Use the tool to make a very brief summary of the following document,
+        explained for children:
 
         ---
 
@@ -46,5 +47,13 @@ internal static class Prompts
 
     public static string GetPromptToBrowseTheInternet() => """
         Provide the lastest top 2 news about Formula 1 current championship.
+        """;
+
+    public static string GetPromptToSearchWithAI() => """
+        Make a deep reasearch about the singularity theorem and report a two-line summary.
+        """;
+
+    public static string GetPromptToSearchWithAI2() => """
+        Tell me what is the most popular research paper about generative AI.
         """;
 }

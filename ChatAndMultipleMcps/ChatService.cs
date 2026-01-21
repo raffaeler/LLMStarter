@@ -44,13 +44,16 @@ internal class ChatService : BackgroundService
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
     };
 
+    private Dictionary<string, string> _toolsToMcp = new();
+
     private ConsoleColor _currentColor = Console.ForegroundColor;
     private ConsoleColor _evenColor = ConsoleColor.Yellow;
     private ConsoleColor _oddColor = ConsoleColor.Green;
     private ConsoleColor _usageColor = ConsoleColor.Cyan;
     private ConsoleColor _systemColor = ConsoleColor.Magenta;
+    private ConsoleColor _toolColor = ConsoleColor.Gray;
 
-    private McpClientApp _mcpClientApp;
+    private List<McpClientApp> _mcpClientApps = [];
 
     //private static Func<string, Dictionary<string, object?>?> _toolsArgumentParser =
     //    static json => JsonSerializer.Deserialize<Dictionary<string, object?>>(json, AIJsonUtilities.DefaultOptions);
@@ -67,8 +70,6 @@ internal class ChatService : BackgroundService
         _lifetime = lifetime;
         //_client = client;
         _mcpClientFactoryService = mcpFactoryService;
-
-        _mcpClientApp = new(_logger, _serviceProvider);
     }
 
     /// <summary>
@@ -83,8 +84,13 @@ internal class ChatService : BackgroundService
 
         Stopwatch sw = new();
         sw.Start();
-        await _mcpClientFactoryService.StartAll(
-            _mcpClientApp.GetMcpClientOptions);
+        await _mcpClientFactoryService.StartAll(configuration =>
+            {
+                var mcpClientApp = new McpClientApp(_logger, _serviceProvider, configuration.Name);
+                _mcpClientApps.Add(mcpClientApp);
+                return mcpClientApp.GetMcpClientOptions(configuration);
+            });
+
         var mcpLoadElapsed = sw.Elapsed;
         sw.Stop();
         Console.WriteLine($"{mcpLoadElapsed.TotalMilliseconds}ms");
@@ -99,7 +105,6 @@ internal class ChatService : BackgroundService
         Console.WriteLine();
 
         Console.ForegroundColor = _evenColor;
-        Console.Write($"Loading tools from the MCPs took:");
         sw.Restart();
         foreach (var proxy in _mcpClientFactoryService.Proxies)
         {
@@ -117,7 +122,10 @@ internal class ChatService : BackgroundService
                     foreach (var c in clientTools)
                     {
                         _tools[c.Name] = (AIFunction)c;
+                        _toolsToMcp[c.Name] = proxy.McpClient.ServerInfo.Name;
                     }
+
+                    Console.WriteLine($"Tools for MCP {proxy.McpClient.ServerInfo.Name}: {clientTools.Count}");
                 }
 
                 if (proxy.McpClient.ServerCapabilities.Resources != null)
@@ -156,7 +164,7 @@ internal class ChatService : BackgroundService
 
         mcpLoadElapsed = sw.Elapsed;
         sw.Stop();
-        Console.WriteLine($"{mcpLoadElapsed.TotalMilliseconds}ms");
+        Console.WriteLine($"Loading tools from the MCPs took: {mcpLoadElapsed.TotalMilliseconds}ms");
         Console.ForegroundColor = _currentColor;
         Console.WriteLine();
 
@@ -217,11 +225,15 @@ internal class ChatService : BackgroundService
         var client = _serviceProvider
             .GetRequiredKeyedService<IChatClient>("main");
 
+        var clientMetadata = client.GetService<ChatClientMetadata>();
+        string? modelName = clientMetadata?.DefaultModelId;
+
         Console.WriteLine("Entering the chat loop.");
         Console.WriteLine("- type 'file' to send a prompt + document to the model.");
         Console.WriteLine("- type 'summary' to send a prompt + document to the model.");
         Console.WriteLine("- type 'elicit' to send a prompt about guessing a number.");
-        Console.WriteLine("- type 'browse' to send a prompt about browsing with Playwright");
+        Console.WriteLine("- type 'browse' to send a prompt searching some info");
+        Console.WriteLine("- type 'browse2' to send a prompt asking for a complex search");
         Console.WriteLine("- type 'quit' or 'exit' to terminate the conversation.");
         List<ChatMessage> prompts = new();
         if (systemprompt != null)
@@ -267,10 +279,17 @@ internal class ChatService : BackgroundService
                     Console.WriteLine("Using prompt:");
                     Console.WriteLine(userMessage);
                 }
+                else if (userMessage == "browse2")
+                {
+                    userMessage = Prompts.GetPromptToSearchWithAI();
+                    Console.WriteLine("Using prompt:");
+                    Console.WriteLine(userMessage);
+                }
 
                 prompts.Add(new ChatMessage(ChatRole.User, userMessage));
             }
 
+            Console.WriteLine($"Using model:{modelName}");
             IAsyncEnumerable<ChatResponseUpdate> streaming =
                 client.GetStreamingResponseAsync(prompts, options);
 
@@ -355,7 +374,16 @@ internal class ChatService : BackgroundService
             //arguments.Context = new Dictionary<object, object?>();
             //arguments.Context["redact"] = true;
 
-            Debug.WriteLine($"AI asked to invoke function {functionName}(...)");
+            if (!_toolsToMcp.TryGetValue(functionName, out var mcp))
+            {
+                mcp = "unknown";
+            }
+
+            var args = string.Join(", ",
+                arguments.Select(a => $"{a.Key}: {a.Value}"));
+            Console.ForegroundColor = _toolColor;
+            Console.WriteLine($"Calling mcp:{mcp} tool:{functionName}({args})");
+            Console.ForegroundColor = _currentColor;
 
             if (!_tools.TryGetValue(functionName, out AIFunction? _tool))
             {

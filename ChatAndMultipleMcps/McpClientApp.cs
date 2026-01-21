@@ -23,11 +23,13 @@ internal class McpClientApp
 {
     private readonly ILogger _logger;
     private readonly IServiceProvider _serviceProvider;
+    private string _mcpName;
 
-    public McpClientApp(ILogger logger, IServiceProvider serviceProvider)
+    public McpClientApp(ILogger logger, IServiceProvider serviceProvider, string mcpName)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
+        _mcpName = mcpName;
     }
 
     public ValueTask<McpClientOptions> GetMcpClientOptions(McpConfiguration configuration)
@@ -159,6 +161,10 @@ internal class McpClientApp
 
         IChatClient summarySamplingClient = _serviceProvider
             .GetRequiredKeyedService<IChatClient>("SummarySamplingClient");
+        var clientMetadata = summarySamplingClient.GetService<ChatClientMetadata>();
+        string? modelName = clientMetadata?.DefaultModelId;
+
+        Console.WriteLine($"MCP:{_mcpName} Sampling request using model:{modelName}");
 
         var (messages, chatOptions) = createMessageRequestParams
             .ToChatClientArguments();

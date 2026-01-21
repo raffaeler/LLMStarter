@@ -7,6 +7,7 @@ using ChatAndMultipleMcps.Helpers;
 using ChatAndMultipleMcps.McpServers.AskUser;
 using ChatAndMultipleMcps.McpServers.LocalFiles;
 using ChatAndMultipleMcps.McpServers.Summary;
+using ChatAndMultipleMcps.McpServers.Time;
 
 using McpClientUtilities;
 
@@ -42,6 +43,8 @@ internal class Program
 
     static async Task Main(string[] args)
     {
+        Utilities.SetSecretWithKey(_secretsFile, "perplexityai-raf1", "PERPLEXITY_API_KEY");
+
         IChatClient azureClient = GetAzureClient();
         IChatClient openaiClient = GetOpenAIClient();
         IChatClient deepseekClient = GetDeepSeekClient();
@@ -86,7 +89,8 @@ internal class Program
             .WithPipesStreamServerTransport()
             .WithTools<LocalFilesMcpServer>()
             .WithTools<SummaryMcpServer>()
-            .WithTools<AskUserMcpServer>();
+            .WithTools<AskUserMcpServer>()
+            .WithTools<TimeMcpServer>();
 
         // ChatService manages the conversation with the interactive user
         builder.Services.AddHostedService<ChatService>();

@@ -33,5 +33,6 @@ builder.Services
     .WithPipesStreamServerTransport()
     .WithTools<LocalFilesMcpServer>()
     .WithTools<SummaryMcpServer>()
-    .WithTools<AskUserMcpServer>();
+    .WithTools<AskUserMcpServer>()
+    .WithTools<TimeMcpServer>();
 ```

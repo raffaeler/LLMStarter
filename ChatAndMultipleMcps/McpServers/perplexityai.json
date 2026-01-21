@@ -1,0 +1,12 @@
+{
+    "mcpServers": {
+        "perplexity": {
+            "type": "stdio",
+            "command": "npx",
+            "args": [ "-y", "perplexity-mcp" ],
+            "env": {
+                "X-PERPLEXITY_API_KEY": "(the secret key is set by the app)"
+            }
+        }
+    }
+}
