@@ -50,7 +50,7 @@ internal class Program
         IChatClient deepseekClient = GetDeepSeekClient();
 
         IChatClient mainClient = azureClient;
-        IChatClient summarySamplingClient = openaiClient;
+        IChatClient summarySamplingClient = deepseekClient;//openaiClient;
 
         Console.WriteLine("Enter to continue without verbose logging");
         Console.WriteLine("V     to enable verbose logging");

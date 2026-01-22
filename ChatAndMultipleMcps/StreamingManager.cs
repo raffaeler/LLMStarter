@@ -60,7 +60,7 @@ internal class StreamingManager
             // var textChunk = update.ToString();
             // if (textChunk.Length > 0) { /* print/send to the user */ }
 
-            await update.Dump(options);
+            //await update.Dump(options);
 
             if (update.Role != null) StreamedRole = update.Role;
             if (update.FinishReason != null) FinishReason = update.FinishReason;
@@ -113,7 +113,9 @@ internal class StreamingManager
             }
         }
 
-        await streaming.Dump(options);
+        // this is commented because it takes some time (causes delays)
+        // but sometimes can be helpful for debugging
+        //await streaming.Dump(options);
 
         Completion = contentBuilder.ToString();
         RefusalMessage = refusalBuilder.ToString();

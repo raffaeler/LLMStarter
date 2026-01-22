@@ -46,12 +46,13 @@ internal class ChatService : BackgroundService
 
     private Dictionary<string, string> _toolsToMcp = new();
 
-    private ConsoleColor _currentColor = Console.ForegroundColor;
-    private ConsoleColor _evenColor = ConsoleColor.Yellow;
-    private ConsoleColor _oddColor = ConsoleColor.Green;
-    private ConsoleColor _usageColor = ConsoleColor.Cyan;
-    private ConsoleColor _systemColor = ConsoleColor.Magenta;
-    private ConsoleColor _toolColor = ConsoleColor.Gray;
+    private static ConsoleColor _defaultColor = Console.ForegroundColor;
+    private static ConsoleColor _evenColor = ConsoleColor.Yellow;
+    private static ConsoleColor _oddColor = ConsoleColor.Green;
+    private static ConsoleColor _internalColor = ConsoleColor.DarkGray;
+    private static ConsoleColor _usageColor = ConsoleColor.Cyan;
+    private static ConsoleColor _systemColor = ConsoleColor.Magenta;
+    private static ConsoleColor _toolColor = ConsoleColor.Gray;
 
     private List<McpClientApp> _mcpClientApps = [];
 
@@ -94,14 +95,14 @@ internal class ChatService : BackgroundService
         var mcpLoadElapsed = sw.Elapsed;
         sw.Stop();
         Console.WriteLine($"{mcpLoadElapsed.TotalMilliseconds}ms");
-        Console.ForegroundColor = _currentColor;
+        Console.ForegroundColor = _defaultColor;
         Console.WriteLine();
 
         Console.WriteLine("Start chatting or type 'exit' to quit");
 
         Console.ForegroundColor = _systemColor;
         string? systemPrompt = GetOptionalSystemPrompt();
-        Console.ForegroundColor = _currentColor;
+        Console.ForegroundColor = _defaultColor;
         Console.WriteLine();
 
         Console.ForegroundColor = _evenColor;
@@ -165,7 +166,7 @@ internal class ChatService : BackgroundService
         mcpLoadElapsed = sw.Elapsed;
         sw.Stop();
         Console.WriteLine($"Loading tools from the MCPs took: {mcpLoadElapsed.TotalMilliseconds}ms");
-        Console.ForegroundColor = _currentColor;
+        Console.ForegroundColor = _defaultColor;
         Console.WriteLine();
 
         if (systemPrompt != null)
@@ -245,7 +246,7 @@ internal class ChatService : BackgroundService
         bool lastWasTool = false;
         do
         {
-            Console.ForegroundColor = _currentColor;
+            Console.ForegroundColor = _defaultColor;
             if (!lastWasTool)
             {
                 Console.Write("You: ");
@@ -293,7 +294,7 @@ internal class ChatService : BackgroundService
             IAsyncEnumerable<ChatResponseUpdate> streaming =
                 client.GetStreamingResponseAsync(prompts, options);
 
-            Debug.WriteLine("=== Asynchronous updates ===");
+            Debug.WriteLine("=== Incoming Asynchronous Streaming updates ===");
             StreamingManager sm = new();
             await sm.ProcessIncomingStreaming(streaming, _options, true,
                 onOutOfBandMessage: Console.WriteLine,
@@ -318,7 +319,7 @@ internal class ChatService : BackgroundService
             if (sm.ToolCalls.Count > 0)
                 prompts.Add(new ChatMessage(ChatRole.Assistant, sm.ToolCalls));
 
-            Console.ForegroundColor = _currentColor;
+            Console.ForegroundColor = _defaultColor;
             Console.WriteLine();
 
             lastWasTool = false;
@@ -370,6 +371,7 @@ internal class ChatService : BackgroundService
             var functionName = toolCall.Name;
             var arguments = new AIFunctionArguments(toolCall.Arguments);
 
+
             // we may provide additional context through custom argument binding
             //arguments.Context = new Dictionary<object, object?>();
             //arguments.Context["redact"] = true;
@@ -381,9 +383,10 @@ internal class ChatService : BackgroundService
 
             var args = string.Join(", ",
                 arguments.Select(a => $"{a.Key}: {a.Value}"));
-            Console.ForegroundColor = _toolColor;
+            Debug.WriteLine($"Tool call start: {functionName}({args})");
+
+            Console.ForegroundColor = _internalColor;
             Console.WriteLine($"Calling mcp:{mcp} tool:{functionName}({args})");
-            Console.ForegroundColor = _currentColor;
 
             if (!_tools.TryGetValue(functionName, out AIFunction? _tool))
             {
@@ -392,6 +395,10 @@ internal class ChatService : BackgroundService
             }
 
             var result = await _tool.InvokeAsync(arguments);
+
+            Console.WriteLine($"mcp:{mcp} tool result:{result}");
+            Debug.WriteLine($"Tool call end: {functionName}({args})");
+            Console.ForegroundColor = _defaultColor;
 
             ChatMessage responseMessage = new(ChatRole.Tool,
                 [

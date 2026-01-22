@@ -47,6 +47,7 @@ internal static class Prompts
 
     public static string GetPromptToBrowseTheInternet() => """
         Provide the lastest top 2 news about Formula 1 current championship.
+        Use the time tool to know today's date.
         """;
 
     public static string GetPromptToSearchWithAI() => """

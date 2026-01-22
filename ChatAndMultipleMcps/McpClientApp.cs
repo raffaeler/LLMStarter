@@ -24,6 +24,8 @@ internal class McpClientApp
     private readonly ILogger _logger;
     private readonly IServiceProvider _serviceProvider;
     private string _mcpName;
+    private static ConsoleColor _defaultColor = Console.ForegroundColor;
+    private static ConsoleColor _internalColor = ConsoleColor.DarkGray;
 
     public McpClientApp(ILogger logger, IServiceProvider serviceProvider, string mcpName)
     {
@@ -82,6 +84,7 @@ internal class McpClientApp
         ListRootsRequestParams? listRootsRequestParams,
         CancellationToken cancellationToken)
     {
+        Console.ForegroundColor = _internalColor;
         Console.WriteLine($"[RootsHandler invoked]");
         var roots = new ListRootsResult()
         {
@@ -96,6 +99,8 @@ internal class McpClientApp
                 }
             ],
         };
+
+        Console.ForegroundColor = _defaultColor;
         return ValueTask.FromResult(roots);
     }
 
@@ -103,6 +108,8 @@ internal class McpClientApp
         JsonRpcNotification notification,
         CancellationToken cancellationToken)
     {
+        Console.ForegroundColor = _internalColor;
+
         Console.WriteLine($"[Notification received: {notification.Method}]");
         if (JsonSerializer.Deserialize<LoggingMessageNotificationParams>(notification.Params) is { } ln)
         {
@@ -132,6 +139,7 @@ internal class McpClientApp
             Console.WriteLine($"Received unexpected logging notification: {notification.Params}");
         }
 
+        Console.ForegroundColor = _defaultColor;
         return ValueTask.CompletedTask;
     }
 
@@ -140,10 +148,13 @@ internal class McpClientApp
             IProgress<ProgressNotificationValue> progress,
             CancellationToken cancellationToken)
     {
-        Console.WriteLine($"[SamplingHandler invoked]");
+        Console.ForegroundColor = _internalColor;
+        Console.WriteLine($"MCP:{_mcpName}:[SamplingHandler invoked]");
 
         if (createMessageRequestParams == null)
         {
+            Console.ForegroundColor = _defaultColor;
+
             return new CreateMessageResult()
             {
                 Model = string.Empty,
@@ -164,6 +175,7 @@ internal class McpClientApp
         var clientMetadata = summarySamplingClient.GetService<ChatClientMetadata>();
         string? modelName = clientMetadata?.DefaultModelId;
 
+        Console.ForegroundColor = _internalColor;
         Console.WriteLine($"MCP:{_mcpName} Sampling request using model:{modelName}");
 
         var (messages, chatOptions) = createMessageRequestParams
@@ -172,6 +184,8 @@ internal class McpClientApp
         var response = await summarySamplingClient.GetResponseAsync(messages, chatOptions, default);
         if (response.Messages.Count != 1)
         {
+            Console.ForegroundColor = _defaultColor;
+
             return new CreateMessageResult()
             {
                 Model = string.Empty,
@@ -187,8 +201,18 @@ internal class McpClientApp
             };
         }
 
-        var result = response.ToCreateMessageResult();
+        CreateMessageResult result = response.ToCreateMessageResult();
+        var length = result.Content.Sum(c =>
+        {
+            if (c is TextContentBlock tcb)
+            {
+                return tcb.Text.Length;
+            }
+            return 0;
+        });
 
+        Console.WriteLine($"MCP:{_mcpName} ResponseLength:{length}");
+        Console.ForegroundColor = _defaultColor;
         return result;
     }
 
@@ -198,9 +222,11 @@ internal class McpClientApp
         ElicitRequestParams? elicitRequestParams,
         CancellationToken cancellationToken)
     {
+        Console.ForegroundColor = _internalColor;
         Console.WriteLine($"[ElicitationHandlerQA invoked]");
         if (elicitRequestParams == null)
         {
+            Console.ForegroundColor = _defaultColor;
             throw new McpException("ElicitationHandlerQA: elicitRequestParams is null");
         }
 
@@ -220,6 +246,7 @@ internal class McpClientApp
             },
         };
 
+        Console.ForegroundColor = _defaultColor;
         return ValueTask.FromResult(result);
     }
 
