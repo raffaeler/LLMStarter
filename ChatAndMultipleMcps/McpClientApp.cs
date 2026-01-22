@@ -26,6 +26,7 @@ internal class McpClientApp
     private string _mcpName;
     private static ConsoleColor _defaultColor = Console.ForegroundColor;
     private static ConsoleColor _internalColor = ConsoleColor.DarkGray;
+    private static ConsoleColor _elicitColor = ConsoleColor.DarkYellow;
 
     public McpClientApp(ILogger logger, IServiceProvider serviceProvider, string mcpName)
     {
@@ -230,6 +231,7 @@ internal class McpClientApp
             throw new McpException("ElicitationHandlerQA: elicitRequestParams is null");
         }
 
+        Console.ForegroundColor = _elicitColor;
         Console.WriteLine($"Elicitation Request: {elicitRequestParams.Message}");
         Console.WriteLine("Type your answer:");
         var answerText = Console.ReadLine();

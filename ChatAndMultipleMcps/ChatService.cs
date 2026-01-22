@@ -33,7 +33,6 @@ internal class ChatService : BackgroundService
     private readonly ILogger _logger;
     private readonly IServiceProvider _serviceProvider;
     private readonly IHostApplicationLifetime _lifetime;
-    //private readonly IChatClient _client;
     private readonly McpProxyFactoryService _mcpClientFactoryService;
     private Dictionary<string, AIFunction> _tools = new();
     private Dictionary<string, AIFunction> _resources = new();
@@ -50,9 +49,10 @@ internal class ChatService : BackgroundService
     private static ConsoleColor _evenColor = ConsoleColor.Yellow;
     private static ConsoleColor _oddColor = ConsoleColor.Green;
     private static ConsoleColor _internalColor = ConsoleColor.DarkGray;
+    private static ConsoleColor _interactiveColor = ConsoleColor.DarkYellow;
     private static ConsoleColor _usageColor = ConsoleColor.Cyan;
-    private static ConsoleColor _systemColor = ConsoleColor.Magenta;
-    private static ConsoleColor _toolColor = ConsoleColor.Gray;
+    private static ConsoleColor _systemColor = ConsoleColor.Blue;
+    private static ConsoleColor _questionColor = ConsoleColor.Red;
 
     private List<McpClientApp> _mcpClientApps = [];
 
@@ -63,13 +63,11 @@ internal class ChatService : BackgroundService
         ILogger<ChatService> logger,
         IServiceProvider serviceProvider,
         IHostApplicationLifetime lifetime,
-        //IChatClient client,
         McpProxyFactoryService mcpFactoryService)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
         _lifetime = lifetime;
-        //_client = client;
         _mcpClientFactoryService = mcpFactoryService;
     }
 
@@ -98,12 +96,12 @@ internal class ChatService : BackgroundService
         Console.ForegroundColor = _defaultColor;
         Console.WriteLine();
 
-        Console.WriteLine("Start chatting or type 'exit' to quit");
-
         Console.ForegroundColor = _systemColor;
         string? systemPrompt = GetOptionalSystemPrompt();
         Console.ForegroundColor = _defaultColor;
         Console.WriteLine();
+
+        Console.WriteLine("Start chatting or type 'exit' to quit");
 
         Console.ForegroundColor = _evenColor;
         sw.Restart();
@@ -111,7 +109,7 @@ internal class ChatService : BackgroundService
         {
             if (proxy.McpClient != null)
             {
-                if(proxy.McpClient.ServerCapabilities.Logging != null)
+                if (proxy.McpClient.ServerCapabilities.Logging != null)
                 {
                     Console.WriteLine($"Enabling logging for MCP {proxy.Name}");
                     await proxy.McpClient.SetLoggingLevelAsync(LoggingLevel.Debug);
@@ -230,12 +228,7 @@ internal class ChatService : BackgroundService
         string? modelName = clientMetadata?.DefaultModelId;
 
         Console.WriteLine("Entering the chat loop.");
-        Console.WriteLine("- type 'file' to send a prompt + document to the model.");
-        Console.WriteLine("- type 'summary' to send a prompt + document to the model.");
-        Console.WriteLine("- type 'elicit' to send a prompt about guessing a number.");
-        Console.WriteLine("- type 'browse' to send a prompt searching some info");
-        Console.WriteLine("- type 'browse2' to send a prompt asking for a complex search");
-        Console.WriteLine("- type 'quit' or 'exit' to terminate the conversation.");
+        PromptTemplatesMenu();
         List<ChatMessage> prompts = new();
         if (systemprompt != null)
         {
@@ -256,37 +249,43 @@ internal class ChatService : BackgroundService
                     Console.WriteLine("Goodbye!");
                     return;
                 }
+                else if (userMessage == "new")
+                {
+                    prompts.Clear();
+                    if (systemprompt != null)
+                    {
+                        prompts.Add(new ChatMessage(ChatRole.System, systemprompt));
+                    }
+                    Console.Clear();
+                    Console.WriteLine("Starting a new chat.");
+                    PromptTemplatesMenu();
+                    continue;
+                }
                 else if (userMessage == "file")
                 {
                     userMessage = Prompts.GetPromptAboutLocalFiles();
-                    Console.WriteLine("Using prompt:");
-                    Console.WriteLine(userMessage);
                 }
                 else if (userMessage == "summary")
                 {
                     userMessage = Prompts.GetPromptWithDocument();
-                    Console.WriteLine("Using prompt:");
-                    Console.WriteLine(userMessage);
                 }
                 else if (userMessage == "elicit")
                 {
                     userMessage = Prompts.GetPromptToElicitUser();
-                    Console.WriteLine("Using prompt:");
-                    Console.WriteLine(userMessage);
                 }
                 else if (userMessage == "browse")
                 {
                     userMessage = Prompts.GetPromptToBrowseTheInternet();
-                    Console.WriteLine("Using prompt:");
-                    Console.WriteLine(userMessage);
                 }
                 else if (userMessage == "browse2")
                 {
                     userMessage = Prompts.GetPromptToSearchWithAI();
-                    Console.WriteLine("Using prompt:");
-                    Console.WriteLine(userMessage);
                 }
 
+                Console.WriteLine("Using prompt:");
+                Console.ForegroundColor = _questionColor;
+                Console.WriteLine(userMessage);
+                Console.ForegroundColor = _defaultColor;
                 prompts.Add(new ChatMessage(ChatRole.User, userMessage));
             }
 
@@ -354,6 +353,20 @@ internal class ChatService : BackgroundService
             }
         }
         while (true);
+    }
+
+    private static void PromptTemplatesMenu()
+    {
+        Console.ForegroundColor = _interactiveColor;
+        Console.WriteLine("- type 'file' to send a prompt + document to the model.");
+        Console.WriteLine("- type 'summary' to send a prompt + document to the model.");
+        Console.WriteLine("- type 'elicit' to send a prompt about guessing a number.");
+        Console.WriteLine("- type 'browse' to send a prompt searching some info");
+        Console.WriteLine("- type 'browse2' to send a prompt asking for a complex search");
+        Console.WriteLine("or");
+        Console.WriteLine("- type 'new' to start a new chat");
+        Console.WriteLine("- type 'quit' or 'exit' to terminate the conversation.");
+        Console.ForegroundColor = _defaultColor;
     }
 
 
