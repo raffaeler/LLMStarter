@@ -37,6 +37,7 @@ internal class TimeMcpServer
             ServerInfo = serverInfo,
             Capabilities = capabilities,
             ToolCollection = [McpServerTool.Create(GetTimeInfo)],
+            PromptCollection = [McpServerPrompt.Create(SystemPrompt)],
         };
     }
 
@@ -63,6 +64,12 @@ internal class TimeMcpServer
         var timezone = now.Offset;
         return $"The current date is {dt.ToLongDateString()}. The current time is {dt.ToLongTimeString()}. The timezone is {timezone}";
     }
+
+    [McpServerPrompt(Name = "time_system")]
+    [Description("The system prompt for the Time MCP")]
+    public string SystemPrompt() => """
+            Use the tool 'time_now' every time the user asks for current information.
+            """;
 
 }
 

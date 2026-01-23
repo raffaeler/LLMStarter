@@ -1,0 +1,26 @@
+{
+    "X-mcpServers": {
+        "AskUserMcpServer": {
+            "type": "inproc",
+            "class": "ChatAndMultipleMcps.McpServers.AskUser.AskUserMcpServer, ChatAndMultipleMcps"
+        },
+        "LocalFilesMcpServer": {
+            "type": "inproc",
+            "class": "ChatAndMultipleMcps.McpServers.LocalFiles.LocalFilesMcpServer, ChatAndMultipleMcps"
+        },
+        "PromptTemplatesMcpServer": {
+            "type": "inproc",
+            "class": "ChatAndMultipleMcps.McpServers.PromptTemplates.PromptTemplatesMcpServer, ChatAndMultipleMcps"
+        },
+        "SummaryMcpServer": {
+            "type": "inproc",
+            "class": "ChatAndMultipleMcps.McpServers.Summary.SummaryMcpServer, ChatAndMultipleMcps"
+        },
+        "TimeMcpServer": {
+            "type": "inproc",
+            "class": "ChatAndMultipleMcps.McpServers.Time.TimeMcpServer, ChatAndMultipleMcps"
+        }
+
+    }
+
+}

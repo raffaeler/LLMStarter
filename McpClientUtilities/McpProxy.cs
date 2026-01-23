@@ -36,6 +36,18 @@ public class McpProxy : IAsyncDisposable
     }
 
     public async Task<bool> Start(McpClientOptions mcpClientOptions,
+        McpConfiguration mcpConfiguration, IClientTransport transport)
+    {
+        if (McpClient != null) return false;
+        McpClient = await McpClient.CreateAsync(transport,
+            mcpClientOptions, _loggerFactory, default);
+
+        Name = mcpConfiguration.Name;
+        ErrorMessage = string.Empty;
+        return true;
+    }
+
+    public async Task<bool> Start(McpClientOptions mcpClientOptions,
         McpConfiguration mcpConfiguration,
         Stream? serverInput = null, Stream? serverOutput = null)
     {

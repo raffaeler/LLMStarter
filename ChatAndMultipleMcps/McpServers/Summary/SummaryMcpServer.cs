@@ -17,8 +17,7 @@ internal class SummaryMcpServer
 {
     private readonly ILogger<SummaryMcpServer> _logger;
 
-    public SummaryMcpServer(
-        ILogger<SummaryMcpServer> logger)
+    public SummaryMcpServer(ILogger<SummaryMcpServer> logger)
     {
         _logger = logger;
 
@@ -29,7 +28,11 @@ internal class SummaryMcpServer
             Version = "1.0.0",
         };
 
-        ServerCapabilities capabilities = new() { /* ... */ };
+        ServerCapabilities capabilities = new()
+        {
+            Tools = new() { ListChanged = false },
+            Prompts = new() { ListChanged = false },
+        };
 
         McpServerOptions = new()
         {

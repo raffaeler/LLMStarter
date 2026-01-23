@@ -6,6 +6,7 @@ using System.IO.Pipelines;
 using ChatAndMultipleMcps.Helpers;
 using ChatAndMultipleMcps.McpServers.AskUser;
 using ChatAndMultipleMcps.McpServers.LocalFiles;
+using ChatAndMultipleMcps.McpServers.PromptTemplates;
 using ChatAndMultipleMcps.McpServers.Summary;
 using ChatAndMultipleMcps.McpServers.Time;
 
@@ -87,10 +88,23 @@ internal class Program
         builder.Services
             .AddMcpServer()
             .WithPipesStreamServerTransport()
+
+            //.WithToolsFromAssembly()
+            //.WithPromptsFromAssembly()
+            //.WithResourcesFromAssembly()
+            .WithPrompts<PromptTemplatesMcpServer>()
             .WithTools<LocalFilesMcpServer>()
-            .WithTools<SummaryMcpServer>()
+
             .WithTools<AskUserMcpServer>()
-            .WithTools<TimeMcpServer>();
+            .WithPrompts<AskUserMcpServer>()
+
+            .WithTools<SummaryMcpServer>()
+            .WithPrompts<SummaryMcpServer>()
+
+            .WithTools<TimeMcpServer>()
+            .WithPrompts<TimeMcpServer>()
+
+            ;
 
         // ChatService manages the conversation with the interactive user
         builder.Services.AddHostedService<ChatService>();

@@ -32,7 +32,10 @@ internal class LocalFilesMcpServer
             Version = "1.0.0",
         };
 
-        ServerCapabilities capabilities = new() { /* ... */ };
+        ServerCapabilities capabilities = new()
+        {
+            Tools = new() { ListChanged = false },
+        };
 
         McpServerOptions = new()
         {

@@ -81,13 +81,29 @@ public class McpProxyFactoryService : IAsyncDisposable
         // one proxy (and MCP Client) for all the local functions
         configurations.Insert(0, McpConfiguration.InProcess);
 
+        //Stream? serverInput = pipes.ClientToServer?.Writer.AsStream()
+        //    ?? throw new Exception("Invalid Pipe for InProc communication");
+        //Stream? serverOutput = pipes.ServerToClient?.Reader.AsStream()
+        //    ?? throw new Exception("Invalid Pipe for InProc communication");
+        //var inprocTransport = new StreamClientTransport(
+        //    serverInput, serverOutput, _loggerFactory);
+
         List<Task> tasks = new();
         foreach (var configuration in configurations)
         {
             var mcpClientOptions = await mcpClientOptionsFunc(configuration);
             McpProxy proxy = new(_loggerFactory);
-            tasks.Add(proxy.Start(mcpClientOptions, configuration,
-                pipes.ClientToServer, pipes.ServerToClient));
+            //if (configuration.InProcClientTransportOptions != null)
+            //{
+            //    tasks.Add(proxy.Start(mcpClientOptions, configuration,
+            //        inprocTransport));
+            //}
+            //else
+            {
+                tasks.Add(proxy.Start(mcpClientOptions, configuration,
+                    pipes.ClientToServer, pipes.ServerToClient));
+            }
+
             _proxies.Add(proxy);
         }
 

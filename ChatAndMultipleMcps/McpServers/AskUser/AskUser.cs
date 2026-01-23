@@ -30,7 +30,11 @@ internal class AskUserMcpServer
             Version = "1.0.0",
         };
 
-        ServerCapabilities capabilities = new() { /* ... */ };
+        ServerCapabilities capabilities = new()
+        {
+            Tools = new() { ListChanged = false },
+            Prompts = new() { ListChanged = false },
+        };
 
         McpServerOptions = new()
         {
@@ -122,12 +126,11 @@ internal class AskUserMcpServer
 
 
 
-    [McpServerPrompt(Name = "system")]
-    [Description("The prompt needed to correctly use the Memory tools")]
+    [McpServerPrompt(Name = "askuser_system")]
+    [Description("The system prompt for the AskUser MCP")]
     public string ElicitSystemPrompt() => """
 
             Use the tool 'askuser_askquestion' to interactively ask questions to the user, whenever you have multiple options to choose from.
-
 
             """;
     //The tool will return the answer provided by the user, giving you the opportunity to exactly identify the best possible answer to the user's original request.

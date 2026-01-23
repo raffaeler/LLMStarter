@@ -140,12 +140,23 @@ internal class ChatService : BackgroundService
                 if (proxy.McpClient.ServerCapabilities.Prompts != null)
                 {
                     var prompts = await proxy.McpClient.ListPromptsAsync();
-                    var prompt = prompts.SingleOrDefault(p => p.Name == "system");
-                    if (prompt != null)
+
+                    // if there are prompts ending with "system"
+                    // we add them to our system prompt by
+                    // concatenating their content
+
+                    var systemPrompts = prompts
+                        .Where(p => p.Name.EndsWith("system"))
+                        .ToList();
+                    if (prompts.Count > 0)
                     {
-                        var system = await prompt.GetAsync(null);
-                        if (system != null)
+                        StringBuilder sb = new();
+                        foreach (var sp in systemPrompts)
                         {
+                            // retrieve each "system" prompt"
+                            GetPromptResult system = await sp.GetAsync(null);
+
+                            // iterate through all the messages of the "system" prompt
                             string[] messageArray = system.Messages
                                 .Select(m => m.Content)
                                 .OfType<TextContentBlock>()
@@ -153,9 +164,12 @@ internal class ChatService : BackgroundService
                                 .Select(t => t.Text)
                                 .ToArray();
 
-                            systemPrompt += Environment.NewLine +
-                                string.Join(Environment.NewLine, messageArray);
+                            sb.AppendLine(string.Join(Environment.NewLine,
+                                messageArray));
                         }
+
+                        sb.AppendLine();
+                        systemPrompt += sb.ToString();
                     }
                 }
             }
@@ -244,6 +258,11 @@ internal class ChatService : BackgroundService
             {
                 Console.Write("You: ");
                 var userMessage = Console.ReadLine();
+                if(string.IsNullOrEmpty(userMessage))
+                {
+                    continue;
+                }
+
                 if (userMessage == "quit" || userMessage == "exit")
                 {
                     Console.WriteLine("Goodbye!");
@@ -261,26 +280,32 @@ internal class ChatService : BackgroundService
                     PromptTemplatesMenu();
                     continue;
                 }
-                else if (userMessage == "file")
+                else if (Prompts.PromptTemplates
+                    .TryGetValue(userMessage.ToLower(),
+                            out (string promptDesc, string promptText) value))
                 {
-                    userMessage = Prompts.GetPromptAboutLocalFiles();
+                    userMessage = value.promptText;
                 }
-                else if (userMessage == "summary")
-                {
-                    userMessage = Prompts.GetPromptWithDocument();
-                }
-                else if (userMessage == "elicit")
-                {
-                    userMessage = Prompts.GetPromptToElicitUser();
-                }
-                else if (userMessage == "browse")
-                {
-                    userMessage = Prompts.GetPromptToBrowseTheInternet();
-                }
-                else if (userMessage == "browse2")
-                {
-                    userMessage = Prompts.GetPromptToSearchWithAI();
-                }
+                //else if (userMessage == "file")
+                //{
+                //    userMessage = Prompts.GetPromptAboutLocalFiles();
+                //}
+                //else if (userMessage == "summary")
+                //{
+                //    userMessage = Prompts.GetPromptWithDocument();
+                //}
+                //else if (userMessage == "elicit")
+                //{
+                //    userMessage = Prompts.GetPromptToElicitUser();
+                //}
+                //else if (userMessage == "browse")
+                //{
+                //    userMessage = Prompts.GetPromptToBrowseTheInternet();
+                //}
+                //else if (userMessage == "browse2")
+                //{
+                //    userMessage = Prompts.GetPromptToSearchWithAI();
+                //}
 
                 Console.WriteLine("Using prompt:");
                 Console.ForegroundColor = _questionColor;
@@ -358,14 +383,21 @@ internal class ChatService : BackgroundService
     private static void PromptTemplatesMenu()
     {
         Console.ForegroundColor = _interactiveColor;
-        Console.WriteLine("- type 'file' to send a prompt + document to the model.");
-        Console.WriteLine("- type 'summary' to send a prompt + document to the model.");
-        Console.WriteLine("- type 'elicit' to send a prompt about guessing a number.");
-        Console.WriteLine("- type 'browse' to send a prompt searching some info");
-        Console.WriteLine("- type 'browse2' to send a prompt asking for a complex search");
-        Console.WriteLine("or");
-        Console.WriteLine("- type 'new' to start a new chat");
-        Console.WriteLine("- type 'quit' or 'exit' to terminate the conversation.");
+
+        Console.WriteLine("Available templates");
+        foreach(var kvp in Prompts.PromptTemplates)
+        {
+            var (promptDesc, promptText) = kvp.Value;
+            Console.WriteLine($"- '{kvp.Key}': {promptDesc}.");
+        }
+        //Console.WriteLine("- type 'file' to send a prompt + document to the model.");
+        //Console.WriteLine("- type 'summary' to send a prompt + document to the model.");
+        //Console.WriteLine("- type 'elicit' to send a prompt about guessing a number.");
+        //Console.WriteLine("- type 'browse' to send a prompt searching some info");
+        //Console.WriteLine("- type 'browse2' to send a prompt asking for a complex search");
+        Console.WriteLine("or commands:");
+        Console.WriteLine("- 'new': start a new chat");
+        Console.WriteLine("- 'quit' or 'exit': terminate the conversation.");
         Console.ForegroundColor = _defaultColor;
     }
 
