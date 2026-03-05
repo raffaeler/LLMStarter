@@ -59,6 +59,7 @@ internal class StdioClientTransportConverter : JsonConverter<StdioClientTranspor
                         break;
 
                     case "environmentVariables":
+                    case "env":
                         environmentVariables = JsonSerializer.Deserialize<Dictionary<string, string?>>(ref reader, options);
                         break;
 

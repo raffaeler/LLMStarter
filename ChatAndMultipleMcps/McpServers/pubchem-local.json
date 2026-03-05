@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "pubchem": {
+      "command": "uvx",
+      "args": ["pubchem_mcp_server"]
+    }
+  }
+}

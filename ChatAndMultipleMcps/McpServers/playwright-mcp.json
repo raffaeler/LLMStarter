@@ -7,7 +7,10 @@
                 "--browser",
                 "chrome",
                 "--extension"
-            ]
+            ],
+            "env": {
+                "PLAYWRIGHT_MCP_EXTENSION_TOKEN": "olHhbHem6MRu5tSq7h_TkmQYhQrQAGAWBsxpo49Z5z8"
+            }
         }
     }
 }

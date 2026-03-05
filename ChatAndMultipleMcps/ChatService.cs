@@ -97,7 +97,7 @@ internal class ChatService : BackgroundService
         Console.WriteLine();
 
         Console.ForegroundColor = _systemColor;
-        string? systemPrompt = GetOptionalSystemPrompt();
+        string systemPrompt = GetOptionalSystemPrompt();
         Console.ForegroundColor = _defaultColor;
         Console.WriteLine();
 
@@ -181,6 +181,9 @@ internal class ChatService : BackgroundService
         Console.ForegroundColor = _defaultColor;
         Console.WriteLine();
 
+        if(_tools.Any(t => t.Key.Contains("browse")))
+            systemPrompt = "Use the browser when needed" + Environment.NewLine + systemPrompt;
+
         if (systemPrompt != null)
         {
             Console.WriteLine("Final System Prompt");
@@ -200,7 +203,8 @@ internal class ChatService : BackgroundService
 
         if (options.Tools.Count > 0)
         {
-            options.ToolMode = ChatToolMode.Auto;
+            //options.ToolMode = ChatToolMode.Auto;
+            //options.ToolMode = ChatToolMode.RequireAny;
         }
         else
         {
@@ -217,12 +221,12 @@ internal class ChatService : BackgroundService
     /// an empty string.
     /// </summary>
     /// <returns></returns>
-    private string? GetOptionalSystemPrompt()
+    private string GetOptionalSystemPrompt()
     {
         Console.WriteLine("Type the system prompt or press enter to skip");
         Console.Write("System prompt: ");
-        var systemPrompt = Console.ReadLine();
-        return string.IsNullOrWhiteSpace(systemPrompt) ? null : systemPrompt;
+        var systemPrompt = Console.ReadLine() ?? string.Empty;
+        return systemPrompt;
     }
 
     /// <summary>

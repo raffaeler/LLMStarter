@@ -28,7 +28,7 @@ internal static class Prompts
 
         {
             "summary",
-            ("document to summarize",
+            ("summarize 'The fox and the grapes'",
             """
             Use the tool to make a very brief summary of the following document,
             explained for children:
@@ -49,7 +49,7 @@ internal static class Prompts
 
         {
             "elicit",
-            ("elicit information from the user",
+            ("time to go from Rome to Madrid",
             """
             How long does it take to go from Rome to Madrid? Ask for help to the user using the tool!
             """)
@@ -66,7 +66,7 @@ internal static class Prompts
 
         {
             "browse",
-            ("A question requiring a search on the internet",
+            ("lastest top 2 news about Formula 1",
             """
             Provide the lastest top 2 news about Formula 1 current championship.
             Use the tools to know today's date.
@@ -75,7 +75,7 @@ internal static class Prompts
 
         {
             "browse2",
-            ("A question requiring a search on the internet",
+            ("deep reasearch about the singularity theorem",
             """
             Make a deep reasearch about the singularity theorem and report a two-line summary.
             """)
@@ -83,11 +83,17 @@ internal static class Prompts
 
         {
             "browse3",
-            ("A question requiring a search on the internet",
+            ("most popular paper on gen AI",
             """
             Tell me what is the most popular research paper about generative AI.Tell me what is the most popular research paper about generative AI.
             """)
         },
+
+        {
+            "browse4",
+            ("cnn headline",
+            "give me the first cnn headline")
+        }
     };
 //    public static string GetPromptAboutLocalFiles() => 
 
