@@ -1,10 +1,18 @@
 {
   "profiles": {
-    "MiniStreamingChatExt": {
+    "Speech": {
       "commandName": "Project",
         "environmentVariables": {
             "AZURE_ENDPOINT": "https://oai-eastus-2.openai.azure.com",
-            "AZURE_MODEL_NAME": "gpt-4o-transcribe"
+            "AZURE_REALTIME_MODEL_NAME": "gpt-live-transcribe",
+            "AZURE_TTS_MODEL_NAME": "gpt-4o-mini-tts",
+            "AZURE_TTS_VOICE": "alloy",
+            "AZURE_TRANSCRIPTION_DELAY": "medium",
+
+            "AZURE_TRANSCRIPTION_LANGUAGE": "en",
+            "AZURE_TRANSCRIPTION_LANGUAGE-EN": "en",
+            "AZURE_TRANSCRIPTION_LANGUAGE-IT": "it",
+            "AZURE_TRANSCRIPTION_LANGUAGE-SL": "sl"
         }
     }
   }
