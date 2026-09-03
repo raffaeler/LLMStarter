@@ -65,6 +65,14 @@ internal static class Prompts
         },
 
         {
+            "roots",
+            ("list the MCP client roots",
+            """
+            Use the client roots tool to list the locations configured by the MCP client.
+            """)
+        },
+
+        {
             "browse",
             ("lastest top 2 news about Formula 1",
             """
@@ -93,6 +101,12 @@ internal static class Prompts
             "browse4",
             ("cnn headline",
             "give me the first cnn headline")
+        },
+
+        {
+            "chem1",
+            ("chemical data for aspirin",
+            "give me the chemical data for aspirin, including the cas number")
         }
     };
 //    public static string GetPromptAboutLocalFiles() => 

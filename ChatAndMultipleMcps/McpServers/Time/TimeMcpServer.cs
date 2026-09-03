@@ -48,21 +48,14 @@ internal class TimeMcpServer
         Use this tool obtain the current date, time and timezone.
         """)]
     [return: Description("The date, time and timezone information of the current user")]
-    public async Task<string> GetTimeInfo(
-        McpServer server)
+    public Task<string> GetTimeInfo()
     {
-        var clientLogger = server
-            .AsClientLoggerProvider()
-            .CreateLogger(nameof(TimeMcpServer));
-
-        clientLogger.LogInformation($"MCP {nameof(GetTimeInfo)}");
-
         _logger.LogInformation($"{nameof(GetTimeInfo)}");
 
         DateTimeOffset now = DateTimeOffset.Now;
         var dt = now.LocalDateTime;
         var timezone = now.Offset;
-        return $"The current date is {dt.ToLongDateString()}. The current time is {dt.ToLongTimeString()}. The timezone is {timezone}";
+        return Task.FromResult($"The current date is {dt.ToLongDateString()}. The current time is {dt.ToLongTimeString()}. The timezone is {timezone}");
     }
 
     [McpServerPrompt(Name = "time_system")]
@@ -72,4 +65,3 @@ internal class TimeMcpServer
             """;
 
 }
-

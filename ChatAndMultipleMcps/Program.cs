@@ -5,6 +5,7 @@ using System.IO.Pipelines;
 
 using ChatAndMultipleMcps.Helpers;
 using ChatAndMultipleMcps.McpServers.AskUser;
+using ChatAndMultipleMcps.McpServers.ClientRoots;
 using ChatAndMultipleMcps.McpServers.LocalFiles;
 using ChatAndMultipleMcps.McpServers.PromptTemplates;
 using ChatAndMultipleMcps.McpServers.Summary;
@@ -92,8 +93,10 @@ internal class Program
             //.WithToolsFromAssembly()
             //.WithPromptsFromAssembly()
             //.WithResourcesFromAssembly()
-            .WithPrompts<PromptTemplatesMcpServer>()
+            .WithPrompts(PromptTemplatesMcpServer.CreatePrompts())
             .WithTools<LocalFilesMcpServer>()
+
+            .WithTools<ClientRootsMcpServer>()
 
             .WithTools<AskUserMcpServer>()
             .WithPrompts<AskUserMcpServer>()

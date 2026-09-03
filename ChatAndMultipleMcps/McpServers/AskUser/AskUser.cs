@@ -1,10 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.Logging;
@@ -16,6 +12,8 @@ namespace ChatAndMultipleMcps.McpServers.AskUser;
 
 internal class AskUserMcpServer
 {
+    private const string ElicitationRequestKey = "answer";
+
     private readonly ILogger<AskUserMcpServer> _logger;
 
     public AskUserMcpServer(
@@ -55,57 +53,52 @@ internal class AskUserMcpServer
     public async Task<string> AskQuestion(
         McpServer server,
         [Description("The question asked to the user")]
-        string question)
+        string question,
+        CancellationToken cancellationToken)
     {
-        var clientLogger = server
-            .AsClientLoggerProvider()
-            .CreateLogger(nameof(AskUserMcpServer));
-
-        clientLogger.LogInformation($"MCP {nameof(AskQuestion)}");
-
         _logger.LogInformation($"{nameof(AskQuestion)}: question={question}");
 
-        ElicitRequestParams elicitRequestParams = new()
-        {
-            Message = question,
-            RequestedSchema = new ElicitRequestParams.RequestSchema()
+        var result = await server.ElicitAsync(
+            new ElicitRequestParams()
             {
-                Properties = new Dictionary<string, ElicitRequestParams.PrimitiveSchemaDefinition>()
+                Message = question,
+                RequestedSchema = new()
                 {
-                    ["answer"] = new ElicitRequestParams.StringSchema
+                    Properties = new Dictionary<string, ElicitRequestParams.PrimitiveSchemaDefinition>()
                     {
-                        Title = "answer",
-                        MinLength = 1,
-                        MaxLength = 300,
+                        [ElicitationRequestKey] = new ElicitRequestParams.StringSchema
+                        {
+                            Title = ElicitationRequestKey,
+                            MinLength = 1,
+                            MaxLength = 300,
+                        },
                     },
                 },
             },
-        };
+            cancellationToken);
 
+        return GetAnswer(result);
+    }
 
-        ElicitResult result = await server.ElicitAsync(
-            elicitRequestParams, default);
-
+    private static string GetAnswer(ElicitResult result)
+    {
         if (result.Action == "decline")
         {
             return "Error: the user declined to answer";
         }
-        else if (result.Action == "cancel")
+
+        if (result.Action == "cancel")
         {
             return "Error: the user canceled the request";
         }
-        else if (result.Action != "accept")
+
+        if (result.Action != "accept")
         {
             return $"Error: unknown Action: {result.Action}";
         }
 
-        Debug.Assert(result.Action == "accept");
-
-        IDictionary<string, JsonElement>? resultDictionary =
-            result.Content;
-
-        if (resultDictionary == null ||
-            !resultDictionary.TryGetValue("answer", out var answerElement))
+        if (result.Content == null ||
+            !result.Content.TryGetValue(ElicitationRequestKey, out var answerElement))
         {
             return "Error: the answer is not textual";
         }
@@ -120,7 +113,6 @@ internal class AskUserMcpServer
         {
             return "Error: the answer is empty";
         }
-
         return answer;
     }
 
@@ -136,4 +128,3 @@ internal class AskUserMcpServer
     //The tool will return the answer provided by the user, giving you the opportunity to exactly identify the best possible answer to the user's original request.
 
 }
-

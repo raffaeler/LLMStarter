@@ -54,14 +54,8 @@ internal class LocalFilesMcpServer
     [McpServerTool(Name = "localFiles_getFilenames")]
     [Description("Get the list of filenames on the local disk. This must be called first, in order to obtain the list of the names of the files.")]
     [return: Description("The list of file names.")]
-    public Task<string[]> GetFilenames(McpServer server)
+    public Task<string[]> GetFilenames()
     {
-        var clientLogger = server
-            .AsClientLoggerProvider()
-            .CreateLogger(nameof(LocalFilesMcpServer));
-
-        clientLogger.LogInformation($"MCP {nameof(GetFilenames)}");
-
         _logger.LogInformation(nameof(GetFilenames));
         DirectoryInfo di = new(_localFilesMcpServerConfiguration.RootFolder);
         var files = di.GetFiles();
@@ -74,16 +68,9 @@ internal class LocalFilesMcpServer
     [Description("Get the content of a file, given its filename")]
     [return: Description("The content of the document")]
     public async Task<string> GetDocument(
-        McpServer server,
         [Description("The name of the file, including the extension")]
         string filename)
     {
-        var clientLogger = server
-            .AsClientLoggerProvider()
-            .CreateLogger(nameof(LocalFilesMcpServer));
-
-        clientLogger.LogInformation($"MCP {nameof(GetDocument)}");
-
         _logger.LogInformation($"{nameof(GetDocument)}: {filename}");
         var fullpath = Path.Combine(_localFilesMcpServerConfiguration.RootFolder, filename);
 
@@ -97,5 +84,3 @@ internal class LocalFilesMcpServer
     }
 
 }
-
-

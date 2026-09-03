@@ -54,8 +54,6 @@ internal class ChatService : BackgroundService
     private static ConsoleColor _systemColor = ConsoleColor.Blue;
     private static ConsoleColor _questionColor = ConsoleColor.Red;
 
-    private List<McpClientApp> _mcpClientApps = [];
-
     //private static Func<string, Dictionary<string, object?>?> _toolsArgumentParser =
     //    static json => JsonSerializer.Deserialize<Dictionary<string, object?>>(json, AIJsonUtilities.DefaultOptions);
 
@@ -85,9 +83,9 @@ internal class ChatService : BackgroundService
         sw.Start();
         await _mcpClientFactoryService.StartAll(configuration =>
             {
-                var mcpClientApp = new McpClientApp(_logger, _serviceProvider, configuration.Name);
-                _mcpClientApps.Add(mcpClientApp);
-                return mcpClientApp.GetMcpClientOptions(configuration);
+                var samplingClient = _serviceProvider
+                    .GetRequiredKeyedService<IChatClient>("SummarySamplingClient");
+                return new McpClientApp(samplingClient).GetMcpClientOptions();
             });
 
         var mcpLoadElapsed = sw.Elapsed;
@@ -109,12 +107,6 @@ internal class ChatService : BackgroundService
         {
             if (proxy.McpClient != null)
             {
-                if (proxy.McpClient.ServerCapabilities.Logging != null)
-                {
-                    Console.WriteLine($"Enabling logging for MCP {proxy.Name}");
-                    await proxy.McpClient.SetLoggingLevelAsync(LoggingLevel.Debug);
-                }
-
                 if (proxy.McpClient.ServerCapabilities.Tools != null)
                 {
                     var clientTools = await proxy.McpClient.ListToolsAsync();

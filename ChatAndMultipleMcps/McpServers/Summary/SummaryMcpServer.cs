@@ -54,6 +54,7 @@ internal class SummaryMcpServer
     [McpServerTool(Name = "summary_createSummary")]
     [Description("Creates a summary of the given text")]
     [return: Description("A summary generated of the provided text")]
+    #pragma warning disable MCP9005 // The SDK routes sampling through MRTR for this tool invocation.
     public async Task<IEnumerable<string>> CreateSummary(
         McpServer server,
         [Description("Describe the desired summary style.")]
@@ -61,16 +62,13 @@ internal class SummaryMcpServer
         [Description("Specifies the length of the resulting document.")]
         string length,
         [Description("The document to sum up.")]
-        string document)
+        string document,
+        CancellationToken cancellationToken)
     {
-        var clientLogger = server
-            .AsClientLoggerProvider()
-            .CreateLogger(nameof(SummaryMcpServer));
+        var documentPreview = document[..Math.Min(document.Length, 10)];
+        _logger.LogInformation($"{nameof(CreateSummary)}: style={style}, length={length}, document={documentPreview}...");
 
-        clientLogger.LogInformation($"MCP {nameof(CreateSummary)}: style={style}, length={length}, document={document.Substring(0, 10)}...");
-
-        _logger.LogInformation($"{nameof(CreateSummary)}: style={style}, length={length}, document={document.Substring(0, 10)}...");
-        CreateMessageResult result = await server.SampleAsync(
+        CreateMessageResult samplingResult = await server.SampleAsync(
             new CreateMessageRequestParams()
             {
                 SystemPrompt = SystemPrompt,
@@ -83,64 +81,26 @@ internal class SummaryMcpServer
                         [
                             new TextContentBlock()
                             {
-                                Text = GetUserPrompt(style, length, document)
+                                Text = GetUserPrompt(style, length, document),
                             },
                         ],
                     },
                 ],
                 MaxTokens = 300,
-                //Temperature = 0.7f,   // not supported by gpt-5-nano
                 IncludeContext = ContextInclusion.ThisServer,
-            }, CancellationToken.None);
+            },
+            cancellationToken);
 
-        var textContents = result.Content.OfType<TextContentBlock>()
-            .Select(t => t.Text);
+        var textContents = samplingResult.Content
+            .OfType<TextContentBlock>()
+            .Select(t => t.Text)
+            .ToArray();
 
-        if (!textContents.Any())
-        {
-            return ["The generated content is not textual"];
-        }
-
-        return textContents;
+        return textContents.Length > 0
+            ? textContents
+            : ["The generated content is not textual"];
     }
-
-    /*
-     This is an alternative implementation of the same tool
-
-    [McpServerTool(Name = "summary_createSummary")]
-    [Description("Creates a summary of the given text")]
-    [return: Description("A summary generated of the provided text")]
-    public async Task<IEnumerable<string>> CreateSummary2(IMcpServer mcpServer,
-    [Description("Describe the desired summary style.")]
-        string style,
-    [Description("Specifies the length of the resulting document.")]
-        string length,
-    [Description("The document to sum up.")]
-        string document)
-    {
-        _logger.LogInformation($"{nameof(CreateSummary)}: style={style}, length={length}, document={document.Substring(0, 10)}...");
-
-        ChatOptions options = new()
-        {
-            MaxOutputTokens = 300,
-            //Temperature = 0.7f,   // not supported by gpt-5-nano
-        };
-
-        var messages = GetSummaryPrompt(style, length, document);
-
-        IChatClient samplingClient = mcpServer.AsSamplingChatClient();
-        var response = await samplingClient.GetResponseAsync(messages, options, default);
-        var textContent = response?.Messages?.FirstOrDefault();
-
-        if (textContent == null)
-        {
-            return ["The generated content is not textual"];
-        }
-
-        return [textContent.Text];
-    }
-
-    */
+    #pragma warning restore MCP9005
 
     private string SystemPrompt => """
         You are an assistant specialized in creating summaries.

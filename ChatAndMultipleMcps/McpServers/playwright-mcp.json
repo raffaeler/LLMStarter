@@ -2,6 +2,7 @@
     "mcpServers": {
         "playwright": {
             "command": "npx",
+            "shutdownTimeout": 1,
             "args": [
                 "@playwright/mcp@latest",
                 "--browser",

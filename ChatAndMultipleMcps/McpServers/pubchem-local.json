@@ -1,8 +1,9 @@
 {
-  "mcpServers": {
-    "pubchem": {
-      "command": "uvx",
-      "args": ["pubchem_mcp_server"]
+    "mcpServers": {
+        "pubchem": {
+            "command": "uvx",
+            "shutdownTimeout": 1,
+            "args": [ "--with", "mcp<2", "pubchem_mcp_server" ]
+        }
     }
-  }
 }

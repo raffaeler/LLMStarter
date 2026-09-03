@@ -39,11 +39,8 @@ public class McpProxyFactoryService : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        foreach (var proxy in _proxies)
-        {
-            await proxy.DisposeAsync();
-        }
-
+        await Task.WhenAll(_proxies.Select(
+            static proxy => proxy.DisposeAsync().AsTask()));
         _proxies.Clear();
     }
 
@@ -93,15 +90,14 @@ public class McpProxyFactoryService : IAsyncDisposable
         {
             var mcpClientOptions = await mcpClientOptionsFunc(configuration);
             McpProxy proxy = new(_loggerFactory);
-            //if (configuration.InProcClientTransportOptions != null)
-            //{
-            //    tasks.Add(proxy.Start(mcpClientOptions, configuration,
-            //        inprocTransport));
-            //}
-            //else
+            if (configuration.InProcClientTransportOptions != null)
             {
                 tasks.Add(proxy.Start(mcpClientOptions, configuration,
                     pipes.ClientToServer, pipes.ServerToClient));
+            }
+            else
+            {
+                tasks.Add(proxy.Start(mcpClientOptions, configuration));
             }
 
             _proxies.Add(proxy);
