@@ -101,7 +101,7 @@ internal class ChatService : BackgroundService
         Console.ForegroundColor = _defaultColor;
         Console.WriteLine();
 
-        Console.WriteLine("Start chatting or type 'exit' to quit");
+        Console.WriteLine("Start chatting or type '/exit' to /quit");
 
         Console.ForegroundColor = _evenColor;
         sw.Restart();
@@ -267,49 +267,40 @@ internal class ChatService : BackgroundService
                     continue;
                 }
 
-                if (userMessage == "quit" || userMessage == "exit")
+                // Is this a command?
+                if (userMessage.StartsWith("/"))
                 {
-                    Console.WriteLine("Goodbye!");
-                    return;
-                }
-                else if (userMessage == "new")
-                {
-                    prompts.Clear();
-                    if (systemprompt != null)
+                    userMessage = userMessage[1..];
+                    if (userMessage == "quit" || userMessage == "exit")
                     {
-                        prompts.Add(new ChatMessage(ChatRole.System, systemprompt));
+                        Console.WriteLine("Goodbye!");
+                        return;
                     }
-                    Console.Clear();
-                    Console.WriteLine("Starting a new chat.");
-                    PromptTemplatesMenu();
-                    continue;
+                    else if (userMessage == "new")
+                    {
+                        prompts.Clear();
+                        if (systemprompt != null)
+                        {
+                            prompts.Add(new ChatMessage(ChatRole.System, systemprompt));
+                        }
+                        Console.Clear();
+                        Console.WriteLine("Starting a new chat.");
+                        PromptTemplatesMenu();
+                        continue;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Unknown command {userMessage}");
+                        continue;
+                    }
                 }
-                else if (Prompts.PromptTemplates
+                
+                if (Prompts.PromptTemplates
                     .TryGetValue(userMessage.ToLower(),
                             out (string promptDesc, string promptText) value))
                 {
                     userMessage = value.promptText;
                 }
-                //else if (userMessage == "file")
-                //{
-                //    userMessage = Prompts.GetPromptAboutLocalFiles();
-                //}
-                //else if (userMessage == "summary")
-                //{
-                //    userMessage = Prompts.GetPromptWithDocument();
-                //}
-                //else if (userMessage == "elicit")
-                //{
-                //    userMessage = Prompts.GetPromptToElicitUser();
-                //}
-                //else if (userMessage == "browse")
-                //{
-                //    userMessage = Prompts.GetPromptToBrowseTheInternet();
-                //}
-                //else if (userMessage == "browse2")
-                //{
-                //    userMessage = Prompts.GetPromptToSearchWithAI();
-                //}
 
                 Console.WriteLine("Using prompt:");
                 Console.ForegroundColor = _questionColor;
@@ -400,8 +391,8 @@ internal class ChatService : BackgroundService
         //Console.WriteLine("- type 'browse' to send a prompt searching some info");
         //Console.WriteLine("- type 'browse2' to send a prompt asking for a complex search");
         Console.WriteLine("or commands:");
-        Console.WriteLine("- 'new': start a new chat");
-        Console.WriteLine("- 'quit' or 'exit': terminate the conversation.");
+        Console.WriteLine("- '/new': start a new chat");
+        Console.WriteLine("- '/quit' or '/exit': terminate the conversation.");
         Console.ForegroundColor = _defaultColor;
     }
 
