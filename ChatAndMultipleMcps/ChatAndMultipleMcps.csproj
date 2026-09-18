@@ -30,6 +30,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\ConsoleUtilities\ConsoleUtilities.csproj" />
 		<ProjectReference Include="..\McpClientUtilities\McpClientUtilities.csproj" />
 	</ItemGroup>
 

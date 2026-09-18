@@ -8,6 +8,9 @@
     <Project Path="MiniStreamingChatExt/MiniStreamingChatExt.csproj" />
   </Folder>
   <Project Path="ChatAndMultipleMcps/ChatAndMultipleMcps.csproj" Id="604ce613-ddf5-4d36-95d0-90b5ee7d3675" />
+  <Project Path="ChatAndMultipleMcps.Tests/ChatAndMultipleMcps.Tests.csproj" />
+  <Project Path="ConsoleUtilities/ConsoleUtilities.csproj" />
+  <Project Path="ConsoleUtilities.Tests/ConsoleUtilities.Tests.csproj" />
   <Project Path="McpClientUtilities/McpClientUtilities.csproj" Id="790f51d7-c799-45b9-8e53-885730577148" />
   <Project Path="Similarities/Similarities.csproj" />
   <Project Path="Speech/Speech.csproj" />

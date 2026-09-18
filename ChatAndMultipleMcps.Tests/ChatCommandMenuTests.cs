@@ -1,0 +1,81 @@
+using ConsoleUtilities;
+using Xunit;
+
+namespace ChatAndMultipleMcps.Tests;
+
+public sealed class ChatCommandMenuTests
+{
+    private readonly VerboseState _verboseState = new();
+    private readonly HashSet<string> _selectedAgents = new(StringComparer.OrdinalIgnoreCase);
+
+    [Fact]
+    public void Slash_OffersEveryCommand()
+    {
+        ChatCommandMenu menu = CreateMenu();
+
+        IReadOnlyList<ConsoleCompletionItem> choices = Complete(menu, "/");
+
+        Assert.Collection(
+            choices,
+            item => Assert.Equal("/system ", item.ReplacementText),
+            item => Assert.Equal("/prompt ", item.ReplacementText),
+            item => Assert.Equal("/agent ", item.ReplacementText),
+            item => Assert.Equal("/verbose ", item.ReplacementText),
+            item => Assert.Equal("/new", item.ReplacementText),
+            item => Assert.Equal("/quit", item.ReplacementText));
+    }
+
+    [Fact]
+    public void PromptCommand_OffersExistingPromptTemplates()
+    {
+        ChatCommandMenu menu = CreateMenu();
+
+        IReadOnlyList<ConsoleCompletionItem> choices = Complete(menu, "/prompt ");
+
+        Assert.Contains(choices, item => item.ReplacementText == "/prompt file");
+        Assert.Contains(choices, item => item.ReplacementText == "/prompt summary");
+        Assert.Contains(choices, item => item.ReplacementText == "/prompt elicit");
+        Assert.All(choices, item => Assert.True(item.Submit));
+    }
+
+    [Fact]
+    public void SystemCommand_OffersShowClearAndFreeTextEntry()
+    {
+        ChatCommandMenu menu = CreateMenu();
+
+        IReadOnlyList<ConsoleCompletionItem> choices = Complete(menu, "/system ");
+
+        Assert.Equal("/system", choices[0].ReplacementText);
+        Assert.Equal("/system \"\"", choices[1].ReplacementText);
+        Assert.True(choices[2].DismissAfterInsert);
+    }
+
+    [Fact]
+    public void VerboseCommand_MarksCurrentValue()
+    {
+        ChatCommandMenu menu = CreateMenu();
+
+        Assert.StartsWith("[X]", Complete(menu, "/verbose ")[0].DisplayText);
+
+        _verboseState.Enabled = true;
+        Assert.StartsWith("[X]", Complete(menu, "/verbose ")[1].DisplayText);
+    }
+
+    [Fact]
+    public void AgentCommand_ExplainsThatNoAgentsAreConfigured()
+    {
+        ChatCommandMenu menu = CreateMenu();
+
+        ConsoleCompletionItem choice = Assert.Single(Complete(menu, "/agent "));
+
+        Assert.Contains("No declarative agents", choice.DisplayText);
+    }
+
+    private ChatCommandMenu CreateMenu() => new(
+        _verboseState,
+        new EmptyDeclarativeAgentCatalog(),
+        _selectedAgents);
+
+    private static IReadOnlyList<ConsoleCompletionItem> Complete(ChatCommandMenu menu, string text) =>
+        menu.GetCompletions(new ConsoleCompletionRequest(text, text.Length));
+}

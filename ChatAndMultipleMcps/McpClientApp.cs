@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Text.Json;
 
+using ConsoleUtilities;
+
 using Microsoft.Extensions.AI;
 
 using ModelContextProtocol;
@@ -17,13 +19,16 @@ namespace ChatAndMultipleMcps;
 internal class McpClientApp
 {
     private readonly IChatClient _samplingClient;
-    private static ConsoleColor _defaultColor = Console.ForegroundColor;
+    private readonly IConsoleTerminal _terminal;
+    private readonly ConsoleColor _defaultColor;
     private static ConsoleColor _internalColor = ConsoleColor.DarkGray;
     private static ConsoleColor _elicitColor = ConsoleColor.DarkYellow;
 
-    public McpClientApp(IChatClient samplingClient)
+    public McpClientApp(IChatClient samplingClient, IConsoleTerminal terminal)
     {
         _samplingClient = samplingClient;
+        _terminal = terminal;
+        _defaultColor = terminal.ForegroundColor;
     }
 
 #pragma warning disable MCP9005 // MRTR sampling and roots use the SDK's deprecated protocol types.
@@ -74,18 +79,18 @@ internal class McpClientApp
         ElicitRequestParams? elicitRequestParams,
         CancellationToken cancellationToken)
     {
-        Console.ForegroundColor = _internalColor;
-        Console.WriteLine($"[ElicitationHandlerQA invoked]");
+        _terminal.ForegroundColor = _internalColor;
+        _terminal.WriteLine($"[ElicitationHandlerQA invoked]");
         if (elicitRequestParams == null)
         {
-            Console.ForegroundColor = _defaultColor;
+            _terminal.ForegroundColor = _defaultColor;
             throw new McpException("ElicitationHandlerQA: elicitRequestParams is null");
         }
 
-        Console.ForegroundColor = _elicitColor;
-        Console.WriteLine($"Elicitation Request: {elicitRequestParams.Message}");
-        Console.WriteLine("Type your answer:");
-        var answerText = Console.ReadLine();
+        _terminal.ForegroundColor = _elicitColor;
+        _terminal.WriteLine($"Elicitation Request: {elicitRequestParams.Message}");
+        _terminal.WriteLine("Type your answer:");
+        var answerText = _terminal.ReadLine();
 
 
         ElicitResult result = new()
@@ -99,7 +104,7 @@ internal class McpClientApp
             },
         };
 
-        Console.ForegroundColor = _defaultColor;
+        _terminal.ForegroundColor = _defaultColor;
         return ValueTask.FromResult(result);
     }
 

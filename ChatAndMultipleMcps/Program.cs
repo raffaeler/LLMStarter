@@ -11,6 +11,8 @@ using ChatAndMultipleMcps.McpServers.PromptTemplates;
 using ChatAndMultipleMcps.McpServers.Summary;
 using ChatAndMultipleMcps.McpServers.Time;
 
+using ConsoleUtilities;
+
 using McpClientUtilities;
 
 using Microsoft.Extensions.AI;
@@ -54,25 +56,16 @@ internal class Program
         IChatClient mainClient = azureClient;
         IChatClient summarySamplingClient = deepseekClient;//openaiClient;
 
-        Console.WriteLine("Enter to continue without verbose logging");
-        Console.WriteLine("V     to enable verbose logging");
-        bool isVerbose = false;
-        var key = Console.ReadKey();
-        if (key.Key == ConsoleKey.V)
-        {
-            isVerbose = true;
-        }
-        Console.Clear();
-
         var builder = Host.CreateApplicationBuilder();
+        VerboseState verboseState = new();
+        IConsoleTerminal terminal = new SystemConsoleTerminal();
+
         builder.Logging.ClearProviders();
-        if (isVerbose)
+        builder.Logging.AddConsole(options =>
         {
-            builder.Logging.AddConsole(options =>
-            {
-                options.LogToStandardErrorThreshold = LogLevel.Trace;
-            });
-        }
+            options.LogToStandardErrorThreshold = LogLevel.Trace;
+        });
+        builder.Logging.AddFilter((_, _) => verboseState.Enabled);
 
         builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
 
@@ -85,6 +78,10 @@ internal class Program
         builder.Services.AddKeyedChatClient("SummarySamplingClient", summarySamplingClient);
 
         builder.Services.AddSingleton<McpProxyFactoryService>();
+        builder.Services.AddSingleton(verboseState);
+        builder.Services.AddSingleton(terminal);
+        builder.Services.AddSingleton<ConsoleLineEditor>();
+        builder.Services.AddSingleton<IDeclarativeAgentCatalog, EmptyDeclarativeAgentCatalog>();
 
         builder.Services
             .AddMcpServer()

@@ -1,445 +1,476 @@
-﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
+using ConsoleUtilities;
 using McpClientUtilities;
-
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-
-using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
-
 namespace ChatAndMultipleMcps;
 
-/// <summary>
-/// A background service handling the chat operations.
-/// </summary>
-internal class ChatService : BackgroundService
+/// <summary>A background service handling the chat operations.</summary>
+internal sealed class ChatService : BackgroundService
 {
-    /// <summary>
-    /// When true, the colors for odd and even tokens are alternated
-    /// </summary>
     private const bool AlternatedColors = false;
 
-    private readonly ILogger _logger;
     private readonly IServiceProvider _serviceProvider;
     private readonly IHostApplicationLifetime _lifetime;
     private readonly McpProxyFactoryService _mcpClientFactoryService;
-    private Dictionary<string, AIFunction> _tools = new();
-    private Dictionary<string, AIFunction> _resources = new();
-    private Dictionary<string, AIFunction> _prompts = new();
-    private static JsonSerializerOptions _options = new()
+    private readonly IConsoleTerminal _terminal;
+    private readonly ConsoleLineEditor _lineEditor;
+    private readonly VerboseState _verboseState;
+    private readonly IDeclarativeAgentCatalog _agentCatalog;
+    private readonly Dictionary<string, AIFunction> _tools = [];
+    private readonly Dictionary<string, string> _toolsToMcp = [];
+    private readonly ConsoleColor _defaultColor;
+
+    private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         WriteIndented = true,
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
     };
 
-    private Dictionary<string, string> _toolsToMcp = new();
-
-    private static ConsoleColor _defaultColor = Console.ForegroundColor;
-    private static ConsoleColor _evenColor = ConsoleColor.Yellow;
-    private static ConsoleColor _oddColor = ConsoleColor.Green;
-    private static ConsoleColor _internalColor = ConsoleColor.DarkGray;
-    private static ConsoleColor _interactiveColor = ConsoleColor.DarkYellow;
-    private static ConsoleColor _usageColor = ConsoleColor.Cyan;
-    private static ConsoleColor _systemColor = ConsoleColor.Blue;
-    private static ConsoleColor _questionColor = ConsoleColor.Red;
-
-    //private static Func<string, Dictionary<string, object?>?> _toolsArgumentParser =
-    //    static json => JsonSerializer.Deserialize<Dictionary<string, object?>>(json, AIJsonUtilities.DefaultOptions);
+    private static readonly ConsoleColor EvenColor = ConsoleColor.Yellow;
+    private static readonly ConsoleColor OddColor = ConsoleColor.Green;
+    private static readonly ConsoleColor InternalColor = ConsoleColor.DarkGray;
+    private static readonly ConsoleColor UsageColor = ConsoleColor.Cyan;
+    private static readonly ConsoleColor SystemColor = ConsoleColor.Blue;
+    private static readonly ConsoleColor QuestionColor = ConsoleColor.Red;
 
     public ChatService(
-        ILogger<ChatService> logger,
         IServiceProvider serviceProvider,
         IHostApplicationLifetime lifetime,
-        McpProxyFactoryService mcpFactoryService)
+        McpProxyFactoryService mcpFactoryService,
+        IConsoleTerminal terminal,
+        ConsoleLineEditor lineEditor,
+        VerboseState verboseState,
+        IDeclarativeAgentCatalog agentCatalog)
     {
-        _logger = logger;
         _serviceProvider = serviceProvider;
         _lifetime = lifetime;
         _mcpClientFactoryService = mcpFactoryService;
+        _terminal = terminal;
+        _lineEditor = lineEditor;
+        _verboseState = verboseState;
+        _agentCatalog = agentCatalog;
+        _defaultColor = terminal.ForegroundColor;
     }
 
-    /// <summary>
-    /// Starts the chat
-    /// </summary>
-    protected override async Task ExecuteAsync(
-        CancellationToken cancellationToken = default)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        Console.WriteLine("MCP powered chat, by Raffaele Rialdi");
-        Console.ForegroundColor = _evenColor;
-        Console.Write("Loading MCP Servers took: ");
+        _terminal.WriteLine("MCP powered chat, by Raffaele Rialdi");
+        _terminal.ForegroundColor = EvenColor;
+        _terminal.Write("Loading MCP Servers took: ");
 
-        Stopwatch sw = new();
-        sw.Start();
+        Stopwatch stopwatch = Stopwatch.StartNew();
         await _mcpClientFactoryService.StartAll(configuration =>
-            {
-                var samplingClient = _serviceProvider
-                    .GetRequiredKeyedService<IChatClient>("SummarySamplingClient");
-                return new McpClientApp(samplingClient).GetMcpClientOptions();
-            });
-
-        var mcpLoadElapsed = sw.Elapsed;
-        sw.Stop();
-        Console.WriteLine($"{mcpLoadElapsed.TotalMilliseconds}ms");
-        Console.ForegroundColor = _defaultColor;
-        Console.WriteLine();
-
-        Console.ForegroundColor = _systemColor;
-        string systemPrompt = GetOptionalSystemPrompt();
-        Console.ForegroundColor = _defaultColor;
-        Console.WriteLine();
-
-        Console.WriteLine("Start chatting or type '/exit' to /quit");
-
-        Console.ForegroundColor = _evenColor;
-        sw.Restart();
-        foreach (var proxy in _mcpClientFactoryService.Proxies)
         {
-            if (proxy.McpClient != null)
+            IChatClient samplingClient = _serviceProvider
+                .GetRequiredKeyedService<IChatClient>("SummarySamplingClient");
+            return new McpClientApp(samplingClient, _terminal).GetMcpClientOptions();
+        });
+
+        TimeSpan mcpLoadElapsed = stopwatch.Elapsed;
+        stopwatch.Stop();
+        _terminal.WriteLine($"{mcpLoadElapsed.TotalMilliseconds}ms");
+        _terminal.ForegroundColor = _defaultColor;
+        _terminal.WriteLine();
+
+        string systemPrompt = string.Empty;
+        _terminal.WriteLine("Start chatting, or type / to choose a command.");
+
+        _terminal.ForegroundColor = EvenColor;
+        stopwatch.Restart();
+        foreach (McpProxy proxy in _mcpClientFactoryService.Proxies)
+        {
+            if (proxy.McpClient is null)
             {
-                if (proxy.McpClient.ServerCapabilities.Tools != null)
-                {
-                    var clientTools = await proxy.McpClient.ListToolsAsync();
-                    foreach (var c in clientTools)
-                    {
-                        _tools[c.Name] = (AIFunction)c;
-                        _toolsToMcp[c.Name] = proxy.McpClient.ServerInfo.Name;
-                    }
+                continue;
+            }
 
-                    Console.WriteLine($"Tools for MCP {proxy.McpClient.ServerInfo.Name}: {clientTools.Count}");
+            if (proxy.McpClient.ServerCapabilities.Tools is not null)
+            {
+                IList<McpClientTool> clientTools = await proxy.McpClient.ListToolsAsync();
+                foreach (McpClientTool tool in clientTools)
+                {
+                    _tools[tool.Name] = (AIFunction)tool;
+                    _toolsToMcp[tool.Name] = proxy.McpClient.ServerInfo.Name;
                 }
 
-                if (proxy.McpClient.ServerCapabilities.Resources != null)
+                _terminal.WriteLine($"Tools for MCP {proxy.McpClient.ServerInfo.Name}: {clientTools.Count}");
+            }
+
+            if (proxy.McpClient.ServerCapabilities.Prompts is not null)
+            {
+                IList<McpClientPrompt> prompts = await proxy.McpClient.ListPromptsAsync();
+                IEnumerable<McpClientPrompt> systemPrompts = prompts
+                    .Where(prompt => prompt.Name.EndsWith("system", StringComparison.OrdinalIgnoreCase));
+
+                StringBuilder systemPromptBuilder = new();
+                foreach (McpClientPrompt prompt in systemPrompts)
                 {
-                    //var resources = await proxy.McpClient.ListResourcesAsync();
-                    //foreach(var r in resources)
-                    //{
-                    //    if (!_resources.ContainsKey(r.Name))
-                    //        _resources[r.Name] = (AIFunction)r;
-                    //}
+                    GetPromptResult system = await prompt.GetAsync(null);
+                    string[] messages = system.Messages
+                        .Select(message => message.Content)
+                        .OfType<TextContentBlock>()
+                        .Select(content => content.Text)
+                        .ToArray();
+                    systemPromptBuilder.AppendLine(string.Join(Environment.NewLine, messages));
                 }
 
-                if (proxy.McpClient.ServerCapabilities.Prompts != null)
+                if (systemPromptBuilder.Length > 0)
                 {
-                    var prompts = await proxy.McpClient.ListPromptsAsync();
-
-                    // if there are prompts ending with "system"
-                    // we add them to our system prompt by
-                    // concatenating their content
-
-                    var systemPrompts = prompts
-                        .Where(p => p.Name.EndsWith("system"))
-                        .ToList();
-                    if (prompts.Count > 0)
-                    {
-                        StringBuilder sb = new();
-                        foreach (var sp in systemPrompts)
-                        {
-                            // retrieve each "system" prompt"
-                            GetPromptResult system = await sp.GetAsync(null);
-
-                            // iterate through all the messages of the "system" prompt
-                            string[] messageArray = system.Messages
-                                .Select(m => m.Content)
-                                .OfType<TextContentBlock>()
-                                .Where(t => t != null)
-                                .Select(t => t.Text)
-                                .ToArray();
-
-                            sb.AppendLine(string.Join(Environment.NewLine,
-                                messageArray));
-                        }
-
-                        sb.AppendLine();
-                        systemPrompt += sb.ToString();
-                    }
+                    systemPrompt += systemPromptBuilder.ToString();
                 }
             }
         }
 
-        mcpLoadElapsed = sw.Elapsed;
-        sw.Stop();
-        Console.WriteLine($"Loading tools from the MCPs took: {mcpLoadElapsed.TotalMilliseconds}ms");
-        Console.ForegroundColor = _defaultColor;
-        Console.WriteLine();
+        mcpLoadElapsed = stopwatch.Elapsed;
+        stopwatch.Stop();
+        _terminal.WriteLine($"Loading tools from the MCPs took: {mcpLoadElapsed.TotalMilliseconds}ms");
+        _terminal.ForegroundColor = _defaultColor;
+        _terminal.WriteLine();
 
-        if(_tools.Any(t => t.Key.Contains("browse")))
-            systemPrompt = "Use the browser when needed" + Environment.NewLine + systemPrompt;
-
-        if (systemPrompt != null)
+        if (_tools.Keys.Any(tool => tool.Contains("browse", StringComparison.OrdinalIgnoreCase)))
         {
-            Console.WriteLine("Final System Prompt");
-            Console.WriteLine(systemPrompt);
-            Console.WriteLine();
+            systemPrompt = "Use the browser when needed" + Environment.NewLine + systemPrompt;
+        }
+
+        if (!string.IsNullOrWhiteSpace(systemPrompt))
+        {
+            _terminal.ForegroundColor = SystemColor;
+            _terminal.WriteLine("Final System Prompt");
+            _terminal.WriteLine(systemPrompt);
+            _terminal.ForegroundColor = _defaultColor;
+            _terminal.WriteLine();
         }
 
         ChatOptions options = new()
         {
             MaxOutputTokens = 5500,
-            //Temperature = 0.7f,   // not supported by gpt-5-nano
-            //TopP = 0.8f,
             FrequencyPenalty = 0,
             PresencePenalty = 0,
             Tools = _tools.Values.OfType<AITool>().ToList(),
         };
-
-        if (options.Tools.Count > 0)
-        {
-            //options.ToolMode = ChatToolMode.Auto;
-            //options.ToolMode = ChatToolMode.RequireAny;
-        }
-        else
+        if (options.Tools.Count == 0)
         {
             options.ToolMode = ChatToolMode.None;
         }
 
-        await ChatLoop(options, systemPrompt);
+        await ChatLoop(options, systemPrompt, cancellationToken);
         _lifetime.StopApplication();
     }
 
-    /// <summary>
-    /// Prompt the user for a system prompt
-    /// or return null if the user provide
-    /// an empty string.
-    /// </summary>
-    /// <returns></returns>
-    private string GetOptionalSystemPrompt()
-    {
-        Console.WriteLine("Type the system prompt or press enter to skip");
-        Console.Write("System prompt: ");
-        var systemPrompt = Console.ReadLine() ?? string.Empty;
-        return systemPrompt;
-    }
-
-    /// <summary>
-    /// The main chat loop
-    /// </summary>
-    /// <param name="options">The parameters for the model</param>
-    /// <param name="systemprompt">The optional system prompt</param>
-    /// <returns></returns>
     private async Task ChatLoop(
         ChatOptions options,
-        string? systemprompt)
+        string initialSystemPrompt,
+        CancellationToken cancellationToken)
     {
-        var client = _serviceProvider
-            .GetRequiredKeyedService<IChatClient>("main");
+        IChatClient client = _serviceProvider.GetRequiredKeyedService<IChatClient>("main");
+        string? modelName = client.GetService<ChatClientMetadata>()?.DefaultModelId;
 
-        var clientMetadata = client.GetService<ChatClientMetadata>();
-        string? modelName = clientMetadata?.DefaultModelId;
-
-        Console.WriteLine("Entering the chat loop.");
-        PromptTemplatesMenu();
-        List<ChatMessage> prompts = new();
-        if (systemprompt != null)
-        {
-            prompts.Add(new ChatMessage(ChatRole.System, systemprompt));
-        }
-
-        string answer = "";
+        _terminal.WriteLine("Entering the chat loop. Type / to browse commands.");
+        List<ChatMessage> conversation = [];
+        HashSet<string> selectedAgents = new(StringComparer.OrdinalIgnoreCase);
+        ChatCommandMenu commandMenu = new(_verboseState, _agentCatalog, selectedAgents);
+        string systemPrompt = initialSystemPrompt;
         bool lastWasTool = false;
-        do
+
+        while (!cancellationToken.IsCancellationRequested)
         {
-            Console.ForegroundColor = _defaultColor;
+            _terminal.ForegroundColor = _defaultColor;
             if (!lastWasTool)
             {
-                Console.Write("You: ");
-                var userMessage = Console.ReadLine();
-                if(string.IsNullOrEmpty(userMessage))
+                string? userMessage = _lineEditor.ReadLine("You: ", commandMenu.GetCompletions);
+                if (userMessage is null)
+                {
+                    _terminal.WriteLine("Goodbye!");
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(userMessage))
                 {
                     continue;
                 }
 
-                // Is this a command?
-                if (userMessage.StartsWith("/"))
+                if (userMessage.StartsWith('/'))
                 {
-                    userMessage = userMessage[1..];
-                    if (userMessage == "quit" || userMessage == "exit")
+                    CommandResult result = HandleCommand(
+                        userMessage,
+                        conversation,
+                        selectedAgents,
+                        ref systemPrompt,
+                        out string? promptText);
+                    if (result == CommandResult.Quit)
                     {
-                        Console.WriteLine("Goodbye!");
+                        _terminal.WriteLine("Goodbye!");
                         return;
                     }
-                    else if (userMessage == "new")
+
+                    if (result == CommandResult.Handled)
                     {
-                        prompts.Clear();
-                        if (systemprompt != null)
-                        {
-                            prompts.Add(new ChatMessage(ChatRole.System, systemprompt));
-                        }
-                        Console.Clear();
-                        Console.WriteLine("Starting a new chat.");
-                        PromptTemplatesMenu();
                         continue;
                     }
-                    else
-                    {
-                        Console.WriteLine($"Unknown command {userMessage}");
-                        continue;
-                    }
+
+                    userMessage = promptText!;
                 }
-                
-                if (Prompts.PromptTemplates
-                    .TryGetValue(userMessage.ToLower(),
-                            out (string promptDesc, string promptText) value))
+                else if (Prompts.PromptTemplates.TryGetValue(
+                    userMessage.ToLowerInvariant(),
+                    out (string promptDescription, string promptText) template))
                 {
-                    userMessage = value.promptText;
+                    // Preserve the old shorthand while /prompt provides discoverability.
+                    userMessage = template.promptText;
                 }
 
-                Console.WriteLine("Using prompt:");
-                Console.ForegroundColor = _questionColor;
-                Console.WriteLine(userMessage);
-                Console.ForegroundColor = _defaultColor;
-                prompts.Add(new ChatMessage(ChatRole.User, userMessage));
+                _terminal.WriteLine("Using prompt:");
+                _terminal.ForegroundColor = QuestionColor;
+                _terminal.WriteLine(userMessage);
+                _terminal.ForegroundColor = _defaultColor;
+                conversation.Add(new ChatMessage(ChatRole.User, userMessage));
             }
 
-            Console.WriteLine($"Using model:{modelName}");
+            _terminal.WriteLine($"Using model:{modelName}");
+            List<ChatMessage> requestMessages = BuildRequestMessages(
+                systemPrompt,
+                selectedAgents,
+                conversation);
             IAsyncEnumerable<ChatResponseUpdate> streaming =
-                client.GetStreamingResponseAsync(prompts, options);
+                client.GetStreamingResponseAsync(requestMessages, options, cancellationToken);
 
             Debug.WriteLine("=== Incoming Asynchronous Streaming updates ===");
-            StreamingManager sm = new();
-            await sm.ProcessIncomingStreaming(streaming, _options, true,
-                onOutOfBandMessage: Console.WriteLine,
+            StreamingManager streamingManager = new();
+            await streamingManager.ProcessIncomingStreaming(
+                streaming,
+                SerializerOptions,
+                true,
+                onOutOfBandMessage: _terminal.WriteLine,
                 onToken: (token, isEven) =>
                 {
-                    Console.ForegroundColor = AlternatedColors && isEven ? _evenColor : _oddColor;
-                    Console.Write(token);
+                    _terminal.ForegroundColor = AlternatedColors && isEven ? EvenColor : OddColor;
+                    _terminal.Write(token);
                 },
                 onUsage: usage =>
                 {
-                    Console.ForegroundColor = _usageColor;
-                    Console.WriteLine(Environment.NewLine +
-                        $"Usage: T={usage.TotalTokenCount} = " +
-                        $"I({usage.InputTokenCount}) + " +
-                        $"O({usage.OutputTokenCount}) + " +
-                        $"A({usage.AdditionalCounts?.Select(a => a.Value).Sum() ?? 0})");
+                    _terminal.ForegroundColor = UsageColor;
+                    _terminal.WriteLine(Environment.NewLine
+                        + $"Usage: T={usage.TotalTokenCount} = "
+                        + $"I({usage.InputTokenCount}) + "
+                        + $"O({usage.OutputTokenCount}) + "
+                        + $"A({usage.AdditionalCounts?.Select(count => count.Value).Sum() ?? 0})");
                 });
 
-            if (sm.Completion?.Length > 0)
-                prompts.Add(new ChatMessage(ChatRole.Assistant, sm.Completion));
+            if (!string.IsNullOrEmpty(streamingManager.Completion))
+            {
+                conversation.Add(new ChatMessage(ChatRole.Assistant, streamingManager.Completion));
+            }
 
-            if (sm.ToolCalls.Count > 0)
-                prompts.Add(new ChatMessage(ChatRole.Assistant, sm.ToolCalls));
+            if (streamingManager.ToolCalls.Count > 0)
+            {
+                conversation.Add(new ChatMessage(ChatRole.Assistant, streamingManager.ToolCalls));
+            }
 
-            Console.ForegroundColor = _defaultColor;
-            Console.WriteLine();
+            _terminal.ForegroundColor = _defaultColor;
+            _terminal.WriteLine();
 
             lastWasTool = false;
-            if (sm.FinishReason == ChatFinishReason.ContentFilter)
+            if (streamingManager.FinishReason == ChatFinishReason.ContentFilter)
             {
-                // Content filtered by the model
-                answer = $"Answer was filtered";
-                Console.WriteLine($"AI Refusal: {sm.RefusalMessage}");
+                _terminal.WriteLine($"AI Refusal: {streamingManager.RefusalMessage}");
             }
-            else if (sm.FinishReason == ChatFinishReason.Length)
+            else if (streamingManager.FinishReason == ChatFinishReason.Length)
             {
-                // Max tokens reached
-                answer = "AI: Max tokens reached";
-                Console.WriteLine($"AI: {answer}");
+                _terminal.WriteLine("AI: Max tokens reached");
             }
-            else if (sm.FinishReason == ChatFinishReason.Stop)
+            else if (streamingManager.FinishReason == ChatFinishReason.Stop)
             {
-                // The completion is ready
-                answer = sm.Completion ?? string.Empty;
-                Debug.WriteLine($"AI: {answer}");
+                Debug.WriteLine($"AI: {streamingManager.Completion}");
             }
-            else if (sm.FinishReason == ChatFinishReason.ToolCalls)
+            else if (streamingManager.FinishReason == ChatFinishReason.ToolCalls)
             {
-                // The model requested to invoke a tool
-                answer = "AI: tool request";
-                await ProcessToolRequest(sm.ToolCalls, prompts);
+                await ProcessToolRequest(streamingManager.ToolCalls, conversation);
                 lastWasTool = true;
             }
             else
             {
-                answer = $"AI: Finish reason: {sm.FinishReason}";
+                _terminal.WriteLine($"AI: Finish reason: {streamingManager.FinishReason}");
             }
         }
-        while (true);
     }
 
-    private static void PromptTemplatesMenu()
+    private CommandResult HandleCommand(
+        string input,
+        List<ChatMessage> conversation,
+        HashSet<string> selectedAgents,
+        ref string systemPrompt,
+        out string? promptText)
     {
-        Console.ForegroundColor = _interactiveColor;
+        promptText = null;
+        string commandLine = input[1..];
+        int separator = commandLine.IndexOf(' ');
+        string command = separator < 0 ? commandLine : commandLine[..separator];
+        string? argument = separator < 0 ? null : commandLine[(separator + 1)..];
 
-        Console.WriteLine("Available templates");
-        foreach(var kvp in Prompts.PromptTemplates)
+        switch (command.ToLowerInvariant())
         {
-            var (promptDesc, promptText) = kvp.Value;
-            Console.WriteLine($"- '{kvp.Key}': {promptDesc}.");
+            case "quit":
+            case "exit":
+                return CommandResult.Quit;
+
+            case "new":
+                conversation.Clear();
+                _terminal.WriteLine("Starting a new chat.");
+                return CommandResult.Handled;
+
+            case "system":
+                if (argument is null)
+                {
+                    _terminal.ForegroundColor = SystemColor;
+                    _terminal.WriteLine(string.IsNullOrEmpty(systemPrompt)
+                        ? "System prompt is empty."
+                        : systemPrompt);
+                    _terminal.ForegroundColor = _defaultColor;
+                }
+                else if (argument.Trim() == "\"\"")
+                {
+                    systemPrompt = string.Empty;
+                    _terminal.WriteLine("System prompt cleared.");
+                }
+                else if (argument.Length > 0)
+                {
+                    systemPrompt = argument;
+                    _terminal.WriteLine("System prompt updated.");
+                }
+                else
+                {
+                    _terminal.WriteLine("Select Show, Clear, or Set from the system menu.");
+                }
+                return CommandResult.Handled;
+
+            case "prompt":
+                if (argument is not null
+                    && Prompts.PromptTemplates.TryGetValue(
+                        argument.Trim().ToLowerInvariant(),
+                        out (string promptDescription, string promptText) template))
+                {
+                    promptText = template.promptText;
+                    return CommandResult.SendPrompt;
+                }
+                _terminal.WriteLine($"Unknown prompt '{argument}'. Select one from the /prompt menu.");
+                return CommandResult.Handled;
+
+            case "agent":
+                DeclarativeAgentDescriptor? agent = _agentCatalog.GetAgents().FirstOrDefault(
+                    candidate => string.Equals(candidate.Name, argument?.Trim(), StringComparison.OrdinalIgnoreCase));
+                if (agent is null)
+                {
+                    _terminal.WriteLine(_agentCatalog.GetAgents().Count == 0
+                        ? "No declarative agents are configured."
+                        : $"Unknown agent '{argument}'. Select one from the /agent menu.");
+                }
+                else if (selectedAgents.Add(agent.Name))
+                {
+                    _terminal.WriteLine($"Agent '{agent.Name}' added to the context.");
+                }
+                else
+                {
+                    _terminal.WriteLine($"Agent '{agent.Name}' is already in the context.");
+                }
+                return CommandResult.Handled;
+
+            case "verbose":
+                if (string.Equals(argument?.Trim(), "on", StringComparison.OrdinalIgnoreCase))
+                {
+                    _verboseState.Enabled = true;
+                    _terminal.WriteLine("Verbose logging is on.");
+                }
+                else if (string.Equals(argument?.Trim(), "off", StringComparison.OrdinalIgnoreCase))
+                {
+                    _verboseState.Enabled = false;
+                    _terminal.WriteLine("Verbose logging is off.");
+                }
+                else
+                {
+                    _terminal.WriteLine("Select on or off from the /verbose menu.");
+                }
+                return CommandResult.Handled;
+
+            default:
+                _terminal.WriteLine($"Unknown command /{command}. Type / to browse commands.");
+                return CommandResult.Handled;
         }
-        //Console.WriteLine("- type 'file' to send a prompt + document to the model.");
-        //Console.WriteLine("- type 'summary' to send a prompt + document to the model.");
-        //Console.WriteLine("- type 'elicit' to send a prompt about guessing a number.");
-        //Console.WriteLine("- type 'browse' to send a prompt searching some info");
-        //Console.WriteLine("- type 'browse2' to send a prompt asking for a complex search");
-        Console.WriteLine("or commands:");
-        Console.WriteLine("- '/new': start a new chat");
-        Console.WriteLine("- '/quit' or '/exit': terminate the conversation.");
-        Console.ForegroundColor = _defaultColor;
     }
 
+    private List<ChatMessage> BuildRequestMessages(
+        string systemPrompt,
+        IReadOnlySet<string> selectedAgents,
+        IEnumerable<ChatMessage> conversation)
+    {
+        List<string> systemSections = [];
+        if (!string.IsNullOrWhiteSpace(systemPrompt))
+        {
+            systemSections.Add(systemPrompt);
+        }
 
-    /// <summary>
-    /// This method processes the tool request
-    /// </summary>
-    /// <param name="completion">The object from the model</param>
-    /// <param name="prompts">The list of prompts (the state)</param>
+        foreach (DeclarativeAgentDescriptor agent in _agentCatalog.GetAgents()
+            .Where(agent => selectedAgents.Contains(agent.Name)))
+        {
+            systemSections.Add(agent.Instructions);
+        }
+
+        List<ChatMessage> messages = [];
+        if (systemSections.Count > 0)
+        {
+            messages.Add(new ChatMessage(
+                ChatRole.System,
+                string.Join(Environment.NewLine + Environment.NewLine, systemSections)));
+        }
+        messages.AddRange(conversation);
+        return messages;
+    }
+
     private async Task ProcessToolRequest(
         IList<AIContent> toolContents,
-        IList<ChatMessage> prompts)
+        IList<ChatMessage> conversation)
     {
-        foreach (var toolCall in toolContents.OfType<FunctionCallContent>())
+        foreach (FunctionCallContent toolCall in toolContents.OfType<FunctionCallContent>())
         {
-            var functionName = toolCall.Name;
-            var arguments = new AIFunctionArguments(toolCall.Arguments);
+            string functionName = toolCall.Name;
+            AIFunctionArguments arguments = new(toolCall.Arguments);
+            string mcp = _toolsToMcp.TryGetValue(functionName, out string? serverName)
+                ? serverName
+                : "unknown";
+            string args = string.Join(", ", arguments.Select(argument => $"{argument.Key}: {argument.Value}"));
 
-
-            // we may provide additional context through custom argument binding
-            //arguments.Context = new Dictionary<object, object?>();
-            //arguments.Context["redact"] = true;
-
-            if (!_toolsToMcp.TryGetValue(functionName, out var mcp))
-            {
-                mcp = "unknown";
-            }
-
-            var args = string.Join(", ",
-                arguments.Select(a => $"{a.Key}: {a.Value}"));
             Debug.WriteLine($"Tool call start: {functionName}({args})");
+            _terminal.ForegroundColor = InternalColor;
+            _terminal.WriteLine($"Calling mcp:{mcp} tool:{functionName}({args})");
 
-            Console.ForegroundColor = _internalColor;
-            Console.WriteLine($"Calling mcp:{mcp} tool:{functionName}({args})");
-
-            if (!_tools.TryGetValue(functionName, out AIFunction? _tool))
+            if (!_tools.TryGetValue(functionName, out AIFunction? tool))
             {
-                Console.WriteLine($"Unknown function {functionName}");
+                _terminal.WriteLine($"Unknown function {functionName}");
+                _terminal.ForegroundColor = _defaultColor;
                 continue;
             }
 
-            var result = await _tool.InvokeAsync(arguments);
-
-            Console.WriteLine($"mcp:{mcp} tool result:{result}");
+            object? result = await tool.InvokeAsync(arguments);
+            _terminal.WriteLine($"mcp:{mcp} tool result:{result}");
             Debug.WriteLine($"Tool call end: {functionName}({args})");
-            Console.ForegroundColor = _defaultColor;
+            _terminal.ForegroundColor = _defaultColor;
 
-            ChatMessage responseMessage = new(ChatRole.Tool,
-                [
-                    new FunctionResultContent(toolCall.CallId, result)
-                ]);
-
-            prompts.Add(responseMessage);
+            conversation.Add(new ChatMessage(
+                ChatRole.Tool,
+                [new FunctionResultContent(toolCall.CallId, result)]));
         }
     }
 
-
+    private enum CommandResult
+    {
+        Handled,
+        SendPrompt,
+        Quit,
+    }
 }
