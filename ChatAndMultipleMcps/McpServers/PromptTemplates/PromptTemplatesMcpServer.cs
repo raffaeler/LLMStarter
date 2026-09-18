@@ -1,21 +1,21 @@
-﻿using System;
+using ChatAndMultipleMcps.Prompts;
+
 using ModelContextProtocol.Server;
 
 namespace ChatAndMultipleMcps.McpServers.PromptTemplates;
 
 internal static class PromptTemplatesMcpServer
 {
-    public static IEnumerable<McpServerPrompt> CreatePrompts()
+    public static IEnumerable<McpServerPrompt> CreatePrompts(IPromptCatalog promptCatalog)
     {
-        foreach (var kvp in Prompts.PromptTemplates)
+        foreach (PromptDescriptor prompt in promptCatalog.GetPrompts())
         {
-            (string promptDescription, string promptText) = kvp.Value;
             yield return McpServerPrompt.Create(
-                () => promptText,
+                () => prompt.Text,
                 new()
                 {
-                    Name = kvp.Key,
-                    Description = promptDescription
+                    Name = prompt.Name,
+                    Description = prompt.Description
                 });
         }
     }

@@ -1,3 +1,6 @@
+using ChatAndMultipleMcps.Declarative;
+using ChatAndMultipleMcps.Prompts;
+
 using ConsoleUtilities;
 using Xunit;
 
@@ -83,6 +86,7 @@ public sealed class ChatCommandMenuTests
             "chemistry.agent.md");
         ChatCommandMenu menu = new(
             _verboseState,
+            CreatePromptCatalog(),
             new FixedCatalog(agent),
             _selectedAgents);
 
@@ -97,8 +101,14 @@ public sealed class ChatCommandMenuTests
 
     private ChatCommandMenu CreateMenu() => new(
         _verboseState,
+        CreatePromptCatalog(),
         new EmptyCatalog(),
         _selectedAgents);
+
+    private static IPromptCatalog CreatePromptCatalog() => new FixedPromptCatalog(
+        new("file", "files available", "List files.", "file.prompt.md"),
+        new("summary", "summarize a story", "Summarize it.", "summary.prompt.md"),
+        new("elicit", "ask the user", "Ask the user.", "elicit.prompt.md"));
 
     private static IReadOnlyList<ConsoleCompletionItem> Complete(ChatCommandMenu menu, string text) =>
         menu.GetCompletions(new ConsoleCompletionRequest(text, text.Length));
@@ -112,5 +122,19 @@ public sealed class ChatCommandMenuTests
         : IDeclarativeAgentCatalog
     {
         public IReadOnlyList<DeclarativeAgentDescriptor> GetAgents() => agents;
+    }
+
+    private sealed class FixedPromptCatalog(params PromptDescriptor[] prompts) : IPromptCatalog
+    {
+        public IReadOnlyList<PromptDescriptor> GetPrompts() => prompts;
+
+        public bool TryGetPrompt(string name, out PromptDescriptor prompt)
+        {
+            prompt = prompts.FirstOrDefault(candidate => string.Equals(
+                candidate.Name,
+                name,
+                StringComparison.OrdinalIgnoreCase))!;
+            return prompt is not null;
+        }
     }
 }

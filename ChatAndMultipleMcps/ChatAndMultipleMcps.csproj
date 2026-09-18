@@ -5,6 +5,7 @@
 		<TargetFramework>net10.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<NoWarn>$(NoWarn);SA0001;SA1002;SA1005;SA1013;SA1028;SA1101;SA1116;SA1117;SA1123;SA1133;SA1201;SA1202;SA1204;SA1309;SA1316;SA1400;SA1401;SA1405;SA1413;SA1501;SA1503;SA1507;SA1508;SA1509;SA1512;SA1513;SA1515;SA1516;SA1517;SA1518;SA1633;SA1649</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -20,6 +21,10 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.11" />
 		<PackageReference Include="ModelContextProtocol" Version="2.2.0" />
+		<PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
 		<PackageReference Include="YamlDotNet" Version="18.1.0" />
 	</ItemGroup>
 

@@ -2,6 +2,9 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 
+using ChatAndMultipleMcps.Declarative;
+using ChatAndMultipleMcps.Prompts;
+
 using ConsoleUtilities;
 using McpClientUtilities;
 using Microsoft.Extensions.AI;
@@ -24,6 +27,7 @@ internal sealed class ChatService : BackgroundService
     private readonly ConsoleLineEditor _lineEditor;
     private readonly VerboseState _verboseState;
     private readonly IDeclarativeAgentCatalog _agentCatalog;
+    private readonly IPromptCatalog _promptCatalog;
     private readonly Dictionary<string, AIFunction> _directTools = [];
     private readonly Dictionary<string, AIFunction> _agentTools = [];
     private readonly Dictionary<string, string> _agentNamesByFunction = [];
@@ -50,6 +54,7 @@ internal sealed class ChatService : BackgroundService
         IConsoleTerminal terminal,
         ConsoleLineEditor lineEditor,
         VerboseState verboseState,
+        IPromptCatalog promptCatalog,
         IDeclarativeAgentCatalog agentCatalog)
     {
         _serviceProvider = serviceProvider;
@@ -58,6 +63,7 @@ internal sealed class ChatService : BackgroundService
         _terminal = terminal;
         _lineEditor = lineEditor;
         _verboseState = verboseState;
+        _promptCatalog = promptCatalog;
         _agentCatalog = agentCatalog;
         _defaultColor = terminal.ForegroundColor;
     }
@@ -201,7 +207,11 @@ internal sealed class ChatService : BackgroundService
         _terminal.WriteLine("Entering the chat loop. Type / to browse commands.");
         List<ChatMessage> conversation = [];
         HashSet<string> selectedAgents = new(StringComparer.OrdinalIgnoreCase);
-        ChatCommandMenu commandMenu = new(_verboseState, _agentCatalog, selectedAgents);
+        ChatCommandMenu commandMenu = new(
+            _verboseState,
+            _promptCatalog,
+            _agentCatalog,
+            selectedAgents);
         string systemPrompt = initialSystemPrompt;
         bool lastWasTool = false;
 
@@ -244,12 +254,10 @@ internal sealed class ChatService : BackgroundService
 
                     userMessage = promptText!;
                 }
-                else if (Prompts.PromptTemplates.TryGetValue(
-                    userMessage.ToLowerInvariant(),
-                    out (string promptDescription, string promptText) template))
+                else if (_promptCatalog.TryGetPrompt(userMessage, out PromptDescriptor template))
                 {
                     // Preserve the old shorthand while /prompt provides discoverability.
-                    userMessage = template.promptText;
+                    userMessage = template.Text;
                 }
 
                 _terminal.WriteLine("Using prompt:");
@@ -393,11 +401,9 @@ internal sealed class ChatService : BackgroundService
 
             case "prompt":
                 if (argument is not null
-                    && Prompts.PromptTemplates.TryGetValue(
-                        argument.Trim().ToLowerInvariant(),
-                        out (string promptDescription, string promptText) template))
+                    && _promptCatalog.TryGetPrompt(argument.Trim(), out PromptDescriptor template))
                 {
-                    promptText = template.promptText;
+                    promptText = template.Text;
                     return CommandResult.SendPrompt;
                 }
                 _terminal.WriteLine($"Unknown prompt '{argument}'. Select one from the /prompt menu.");

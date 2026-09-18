@@ -18,7 +18,7 @@ namespace ChatAndMultipleMcps;
 /// - Normal completion
 /// - Refusal because of safety restrictions
 /// - Refusal because of max token limits
-/// - Tool calls request
+/// - Tool calls request.
 /// </summary>
 internal class StreamingManager
 {

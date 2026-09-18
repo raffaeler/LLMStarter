@@ -2,20 +2,7 @@ using Microsoft.Extensions.Configuration;
 
 using YamlDotNet.Serialization;
 
-namespace ChatAndMultipleMcps;
-
-internal sealed record DeclarativeAgentDescriptor(
-    string Name,
-    string FunctionName,
-    string Description,
-    string Instructions,
-    IReadOnlyList<string> ToolSelectors,
-    string SourcePath);
-
-internal interface IDeclarativeAgentCatalog
-{
-    IReadOnlyList<DeclarativeAgentDescriptor> GetAgents();
-}
+namespace ChatAndMultipleMcps.Declarative;
 
 /// <summary>
 /// Loads standard .agent.md files. The YAML front matter describes the agent,
@@ -23,7 +10,7 @@ internal interface IDeclarativeAgentCatalog
 /// </summary>
 internal sealed class MarkdownDeclarativeAgentCatalog : IDeclarativeAgentCatalog
 {
-    internal const string DefaultDirectory = "./agents";
+    internal const string DefaultDirectory = "./.agents";
 
     private readonly IReadOnlyList<DeclarativeAgentDescriptor> _agents;
 

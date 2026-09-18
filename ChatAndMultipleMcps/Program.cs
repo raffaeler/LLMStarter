@@ -3,6 +3,7 @@ using System.ClientModel;
 using System.ClientModel.Primitives;
 using System.IO.Pipelines;
 
+using ChatAndMultipleMcps.Declarative;
 using ChatAndMultipleMcps.Helpers;
 using ChatAndMultipleMcps.McpServers.AskUser;
 using ChatAndMultipleMcps.McpServers.ClientRoots;
@@ -10,6 +11,7 @@ using ChatAndMultipleMcps.McpServers.LocalFiles;
 using ChatAndMultipleMcps.McpServers.PromptTemplates;
 using ChatAndMultipleMcps.McpServers.Summary;
 using ChatAndMultipleMcps.McpServers.Time;
+using ChatAndMultipleMcps.Prompts;
 
 using ConsoleUtilities;
 
@@ -69,6 +71,8 @@ internal class Program
 
         builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
 
+        IPromptCatalog promptCatalog = new MarkdownPromptCatalog(builder.Configuration);
+
         #region configurations
         builder.Services.Configure<LocalFilesMcpServerConfiguration>(
             builder.Configuration.GetSection("LocalFilesMcpServer"));
@@ -82,6 +86,7 @@ internal class Program
         builder.Services.AddSingleton(terminal);
         builder.Services.AddSingleton<ConsoleLineEditor>();
         builder.Services.AddSingleton<IDeclarativeAgentCatalog, MarkdownDeclarativeAgentCatalog>();
+        builder.Services.AddSingleton(promptCatalog);
 
         builder.Services
             .AddMcpServer()
@@ -90,7 +95,7 @@ internal class Program
             //.WithToolsFromAssembly()
             //.WithPromptsFromAssembly()
             //.WithResourcesFromAssembly()
-            .WithPrompts(PromptTemplatesMcpServer.CreatePrompts())
+            .WithPrompts(PromptTemplatesMcpServer.CreatePrompts(promptCatalog))
             .WithTools<LocalFilesMcpServer>()
 
             .WithTools<ClientRootsMcpServer>()

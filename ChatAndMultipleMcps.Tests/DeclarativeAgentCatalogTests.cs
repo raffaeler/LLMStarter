@@ -1,3 +1,5 @@
+using ChatAndMultipleMcps.Declarative;
+
 using Xunit;
 
 namespace ChatAndMultipleMcps.Tests;
@@ -19,7 +21,7 @@ public sealed class DeclarativeAgentCatalogTests
             Use authoritative chemical data.
             """);
 
-        MarkdownDeclarativeAgentCatalog catalog = new(repository.Path, "agents");
+        MarkdownDeclarativeAgentCatalog catalog = new(repository.Path, ".agents");
 
         DeclarativeAgentDescriptor agent = Assert.Single(catalog.GetAgents());
         Assert.Equal("chemistry", agent.Name);
@@ -43,7 +45,7 @@ public sealed class DeclarativeAgentCatalogTests
             """);
 
         DeclarativeAgentDescriptor agent = Assert.Single(
-            new MarkdownDeclarativeAgentCatalog(repository.Path, "agents").GetAgents());
+            new MarkdownDeclarativeAgentCatalog(repository.Path, ".agents").GetAgents());
 
         Assert.Equal("Ingredient Specialist", agent.Name);
         Assert.Equal("agent_ingredient_specialist", agent.FunctionName);
@@ -62,7 +64,7 @@ public sealed class DeclarativeAgentCatalogTests
             """);
 
         DeclarativeAgentDescriptor agent = Assert.Single(
-            new MarkdownDeclarativeAgentCatalog(repository.Path, "agents").GetAgents());
+            new MarkdownDeclarativeAgentCatalog(repository.Path, ".agents").GetAgents());
 
         Assert.Equal(["*"], agent.ToolSelectors);
     }
@@ -73,7 +75,7 @@ public sealed class DeclarativeAgentCatalogTests
         using TemporaryRepository repository = new();
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
-            MarkdownDeclarativeAgentCatalog.ResolveAgentsDirectory(repository.Path, "../agents"));
+            MarkdownDeclarativeAgentCatalog.ResolveAgentsDirectory(repository.Path, "../.agents"));
 
         Assert.Contains("inside the repository", exception.Message);
     }
@@ -90,7 +92,7 @@ public sealed class DeclarativeAgentCatalogTests
             """);
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
-            new MarkdownDeclarativeAgentCatalog(repository.Path, "agents"));
+            new MarkdownDeclarativeAgentCatalog(repository.Path, ".agents"));
 
         Assert.Contains("description", exception.Message);
         Assert.Contains("invalid.agent.md", exception.Message);
@@ -104,13 +106,13 @@ public sealed class DeclarativeAgentCatalogTests
                 System.IO.Path.GetTempPath(),
                 "LLMStarterTests",
                 Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(System.IO.Path.Combine(Path, "agents"));
+            Directory.CreateDirectory(System.IO.Path.Combine(Path, ".agents"));
         }
 
         public string Path { get; }
 
         public void WriteAgent(string filename, string contents) => File.WriteAllText(
-            System.IO.Path.Combine(Path, "agents", filename),
+            System.IO.Path.Combine(Path, ".agents", filename),
             contents);
 
         public void Dispose()

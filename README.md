@@ -50,7 +50,7 @@ The project `McpClientUtilities` is a generic library providing utilities and he
 
 ### Declarative agents
 
-`ChatAndMultipleMcps` loads declarative agents from the repository-relative folder configured by `DeclarativeAgents:Directory` (`./agents` by default). Each `*.agent.md` file contains standard YAML front matter followed by the agent's system prompt:
+`ChatAndMultipleMcps` loads declarative agents from the repository-relative folder configured by `DeclarativeAgents:Directory` (`./.agents` by default). Each `*.agent.md` file contains standard YAML front matter followed by the agent's system prompt:
 
 ```markdown
 ---
@@ -63,6 +63,21 @@ You are an expert in chemical ingredients.
 ```
 
 Use `/agent Chemical Ingredients Expert` in the console to select the agent, repeat the command to disable it, or select another agent to switch. For each new user request, the main model is required to delegate to the selected agent. It sees that `agent_*` function and all unassigned MCP tools, but not the agent's PubChem tool schemas. `DeclarativeAgentRunner` then starts a private conversation, gives it only the declared MCP tools, executes its model/tool loop, and returns the final text to the main conversation. Unassigned tools remain available to the main model before and after delegation.
+
+### Saved prompts
+
+`ChatAndMultipleMcps` loads saved prompts from the repository-relative folder
+configured by `Prompts:Directory` (`./.prompts` by default). The filename supplies
+the prompt name, so `chem1.prompt.md` is available as `/prompt chem1` and through
+the existing `chem1` shorthand. Each `*.prompt.md` file contains a description in
+YAML front matter and the prompt itself in the Markdown body:
+
+```markdown
+---
+description: chemical data for aspirin
+---
+Give me the chemical data for aspirin, including the CAS number.
+```
 
 
 

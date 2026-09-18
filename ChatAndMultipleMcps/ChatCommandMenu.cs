@@ -1,3 +1,6 @@
+using ChatAndMultipleMcps.Declarative;
+using ChatAndMultipleMcps.Prompts;
+
 using ConsoleUtilities;
 
 namespace ChatAndMultipleMcps;
@@ -16,14 +19,17 @@ internal sealed class ChatCommandMenu
 
     private readonly VerboseState _verboseState;
     private readonly IDeclarativeAgentCatalog _agentCatalog;
+    private readonly IPromptCatalog _promptCatalog;
     private readonly IReadOnlySet<string> _selectedAgents;
 
     public ChatCommandMenu(
         VerboseState verboseState,
+        IPromptCatalog promptCatalog,
         IDeclarativeAgentCatalog agentCatalog,
         IReadOnlySet<string> selectedAgents)
     {
         _verboseState = verboseState;
+        _promptCatalog = promptCatalog;
         _agentCatalog = agentCatalog;
         _selectedAgents = selectedAgents;
     }
@@ -76,13 +82,13 @@ internal sealed class ChatCommandMenu
         ];
     }
 
-    private static IReadOnlyList<ConsoleCompletionItem> GetPromptChoices(string argument)
+    private IReadOnlyList<ConsoleCompletionItem> GetPromptChoices(string argument)
     {
-        return Prompts.PromptTemplates
-            .Where(prompt => prompt.Key.StartsWith(argument, StringComparison.OrdinalIgnoreCase))
+        return _promptCatalog.GetPrompts()
+            .Where(prompt => prompt.Name.StartsWith(argument, StringComparison.OrdinalIgnoreCase))
             .Select(prompt => new ConsoleCompletionItem(
-                $"{prompt.Key,-12} {prompt.Value.Item1}",
-                $"/prompt {prompt.Key}",
+                $"{prompt.Name,-12} {prompt.Description}",
+                $"/prompt {prompt.Name}",
                 Submit: true))
             .ToArray();
     }

@@ -1,5 +1,7 @@
 using System.Runtime.CompilerServices;
 
+using ChatAndMultipleMcps.Declarative;
+
 using ConsoleUtilities;
 using Microsoft.Extensions.AI;
 using Xunit;
