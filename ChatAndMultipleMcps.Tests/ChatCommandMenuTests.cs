@@ -71,11 +71,46 @@ public sealed class ChatCommandMenuTests
         Assert.Contains("No declarative agents", choice.DisplayText);
     }
 
+    [Fact]
+    public void AgentCommand_OffersConfiguredAgentAndMarksSelection()
+    {
+        DeclarativeAgentDescriptor agent = new(
+            "Chemistry",
+            "agent_chemistry",
+            "Answers chemistry questions",
+            "Chemistry instructions",
+            ["pubchem/*"],
+            "chemistry.agent.md");
+        ChatCommandMenu menu = new(
+            _verboseState,
+            new FixedCatalog(agent),
+            _selectedAgents);
+
+        ConsoleCompletionItem unselected = Assert.Single(Complete(menu, "/agent Chem"));
+        Assert.StartsWith("[ ]", unselected.DisplayText);
+        Assert.Equal("/agent Chemistry", unselected.ReplacementText);
+
+        _selectedAgents.Add(agent.Name);
+        ConsoleCompletionItem selected = Assert.Single(Complete(menu, "/agent Chem"));
+        Assert.StartsWith("[X]", selected.DisplayText);
+    }
+
     private ChatCommandMenu CreateMenu() => new(
         _verboseState,
-        new EmptyDeclarativeAgentCatalog(),
+        new EmptyCatalog(),
         _selectedAgents);
 
     private static IReadOnlyList<ConsoleCompletionItem> Complete(ChatCommandMenu menu, string text) =>
         menu.GetCompletions(new ConsoleCompletionRequest(text, text.Length));
+
+    private sealed class EmptyCatalog : IDeclarativeAgentCatalog
+    {
+        public IReadOnlyList<DeclarativeAgentDescriptor> GetAgents() => [];
+    }
+
+    private sealed class FixedCatalog(params DeclarativeAgentDescriptor[] agents)
+        : IDeclarativeAgentCatalog
+    {
+        public IReadOnlyList<DeclarativeAgentDescriptor> GetAgents() => agents;
+    }
 }

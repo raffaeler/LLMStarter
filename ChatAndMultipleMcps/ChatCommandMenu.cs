@@ -8,7 +8,7 @@ internal sealed class ChatCommandMenu
     [
         new("system", "Show, set, or clear the system prompt", true),
         new("prompt", "Use a saved prompt", true),
-        new("agent", "Add a declarative agent to the context", true),
+        new("agent", "Enable a declarative agent as a tool", true),
         new("verbose", "Turn verbose logging on or off", true),
         new("new", "Start a new chat", false),
         new("quit", "Exit the process", false),

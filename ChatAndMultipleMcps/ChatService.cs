@@ -24,7 +24,9 @@ internal sealed class ChatService : BackgroundService
     private readonly ConsoleLineEditor _lineEditor;
     private readonly VerboseState _verboseState;
     private readonly IDeclarativeAgentCatalog _agentCatalog;
-    private readonly Dictionary<string, AIFunction> _tools = [];
+    private readonly Dictionary<string, AIFunction> _directTools = [];
+    private readonly Dictionary<string, AIFunction> _agentTools = [];
+    private readonly Dictionary<string, string> _agentNamesByFunction = [];
     private readonly Dictionary<string, string> _toolsToMcp = [];
     private readonly ConsoleColor _defaultColor;
 
@@ -80,11 +82,11 @@ internal sealed class ChatService : BackgroundService
         _terminal.ForegroundColor = _defaultColor;
         _terminal.WriteLine();
 
-        string systemPrompt = string.Empty;
         _terminal.WriteLine("Start chatting, or type / to choose a command.");
 
         _terminal.ForegroundColor = EvenColor;
         stopwatch.Restart();
+        List<McpServerRegistration> servers = [];
         foreach (McpProxy proxy in _mcpClientFactoryService.Proxies)
         {
             if (proxy.McpClient is null)
@@ -92,18 +94,22 @@ internal sealed class ChatService : BackgroundService
                 continue;
             }
 
+            List<McpToolRegistration> serverTools = [];
             if (proxy.McpClient.ServerCapabilities.Tools is not null)
             {
                 IList<McpClientTool> clientTools = await proxy.McpClient.ListToolsAsync();
                 foreach (McpClientTool tool in clientTools)
                 {
-                    _tools[tool.Name] = (AIFunction)tool;
-                    _toolsToMcp[tool.Name] = proxy.McpClient.ServerInfo.Name;
+                    serverTools.Add(new McpToolRegistration(
+                        proxy.Name,
+                        proxy.McpClient.ServerInfo.Name,
+                        (AIFunction)tool));
                 }
 
                 _terminal.WriteLine($"Tools for MCP {proxy.McpClient.ServerInfo.Name}: {clientTools.Count}");
             }
 
+            string mcpSystemPrompt = string.Empty;
             if (proxy.McpClient.ServerCapabilities.Prompts is not null)
             {
                 IList<McpClientPrompt> prompts = await proxy.McpClient.ListPromptsAsync();
@@ -124,10 +130,40 @@ internal sealed class ChatService : BackgroundService
 
                 if (systemPromptBuilder.Length > 0)
                 {
-                    systemPrompt += systemPromptBuilder.ToString();
+                    mcpSystemPrompt = systemPromptBuilder.ToString().Trim();
                 }
             }
+
+            servers.Add(new McpServerRegistration(
+                proxy.Name,
+                proxy.McpClient.ServerInfo.Name,
+                serverTools,
+                mcpSystemPrompt));
         }
+
+        DeclarativeAgentToolPartition partition = DeclarativeAgentToolResolver.Resolve(
+            _agentCatalog.GetAgents(),
+            servers);
+        foreach (McpToolRegistration tool in partition.DirectTools)
+        {
+            _directTools.Add(tool.Function.Name, tool.Function);
+            _toolsToMcp[tool.Function.Name] = tool.ServerDisplayName;
+        }
+
+        IChatClient agentClient = _serviceProvider.GetRequiredKeyedService<IChatClient>("main");
+        foreach (ResolvedDeclarativeAgent agent in partition.Agents)
+        {
+            AIFunction function = new DeclarativeAgentRunner(
+                agentClient,
+                agent,
+                _terminal,
+                _verboseState).CreateFunction();
+            _agentTools.Add(agent.Descriptor.Name, function);
+            _agentNamesByFunction.Add(function.Name, agent.Descriptor.Name);
+            _toolsToMcp[function.Name] = $"declarative-agent:{agent.Descriptor.Name}";
+        }
+
+        string systemPrompt = partition.MainSystemPrompt;
 
         mcpLoadElapsed = stopwatch.Elapsed;
         stopwatch.Stop();
@@ -135,7 +171,7 @@ internal sealed class ChatService : BackgroundService
         _terminal.ForegroundColor = _defaultColor;
         _terminal.WriteLine();
 
-        if (_tools.Keys.Any(tool => tool.Contains("browse", StringComparison.OrdinalIgnoreCase)))
+        if (_directTools.Keys.Any(tool => tool.Contains("browse", StringComparison.OrdinalIgnoreCase)))
         {
             systemPrompt = "Use the browser when needed" + Environment.NewLine + systemPrompt;
         }
@@ -149,24 +185,13 @@ internal sealed class ChatService : BackgroundService
             _terminal.WriteLine();
         }
 
-        ChatOptions options = new()
-        {
-            MaxOutputTokens = 5500,
-            FrequencyPenalty = 0,
-            PresencePenalty = 0,
-            Tools = _tools.Values.OfType<AITool>().ToList(),
-        };
-        if (options.Tools.Count == 0)
-        {
-            options.ToolMode = ChatToolMode.None;
-        }
-
-        await ChatLoop(options, systemPrompt, cancellationToken);
+        _terminal.WriteLine(
+            $"Main chat tools: {_directTools.Count}; declarative agents: {_agentTools.Count}");
+        await ChatLoop(systemPrompt, cancellationToken);
         _lifetime.StopApplication();
     }
 
     private async Task ChatLoop(
-        ChatOptions options,
         string initialSystemPrompt,
         CancellationToken cancellationToken)
     {
@@ -182,8 +207,9 @@ internal sealed class ChatService : BackgroundService
 
         while (!cancellationToken.IsCancellationRequested)
         {
+            bool isNewUserTurn = !lastWasTool;
             _terminal.ForegroundColor = _defaultColor;
-            if (!lastWasTool)
+            if (isNewUserTurn)
             {
                 string? userMessage = _lineEditor.ReadLine("You: ", commandMenu.GetCompletions);
                 if (userMessage is null)
@@ -234,9 +260,20 @@ internal sealed class ChatService : BackgroundService
             }
 
             _terminal.WriteLine($"Using model:{modelName}");
+            bool mustDelegate = isNewUserTurn && selectedAgents.Count > 0;
+            IReadOnlyDictionary<string, AIFunction> selectedAgentTools =
+                GetSelectedAgentTools(selectedAgents);
+            IReadOnlyDictionary<string, AIFunction> availableTools =
+                GetAvailableTools(selectedAgents);
+            string? requiredAgentFunction = mustDelegate && selectedAgentTools.Count == 1
+                ? selectedAgentTools.Keys.Single()
+                : null;
+            ChatOptions options = CreateChatOptions(
+                availableTools.Values,
+                requireTool: mustDelegate,
+                requiredFunctionName: requiredAgentFunction);
             List<ChatMessage> requestMessages = BuildRequestMessages(
                 systemPrompt,
-                selectedAgents,
                 conversation);
             IAsyncEnumerable<ChatResponseUpdate> streaming =
                 client.GetStreamingResponseAsync(requestMessages, options, cancellationToken);
@@ -291,7 +328,11 @@ internal sealed class ChatService : BackgroundService
             }
             else if (streamingManager.FinishReason == ChatFinishReason.ToolCalls)
             {
-                await ProcessToolRequest(streamingManager.ToolCalls, conversation);
+                await ProcessToolRequest(
+                    streamingManager.ToolCalls,
+                    conversation,
+                    availableTools,
+                    cancellationToken);
                 lastWasTool = true;
             }
             else
@@ -371,13 +412,17 @@ internal sealed class ChatService : BackgroundService
                         ? "No declarative agents are configured."
                         : $"Unknown agent '{argument}'. Select one from the /agent menu.");
                 }
-                else if (selectedAgents.Add(agent.Name))
+                else if (selectedAgents.Remove(agent.Name))
                 {
-                    _terminal.WriteLine($"Agent '{agent.Name}' added to the context.");
+                    _terminal.WriteLine($"Agent '{agent.Name}' disabled.");
                 }
                 else
                 {
-                    _terminal.WriteLine($"Agent '{agent.Name}' is already in the context.");
+                    selectedAgents.Clear();
+                    selectedAgents.Add(agent.Name);
+                    _terminal.WriteLine(
+                        $"Agent '{agent.Name}' selected for delegation. Select it again to disable it, "
+                        + "or select another agent to switch.");
                 }
                 return CommandResult.Handled;
 
@@ -404,21 +449,72 @@ internal sealed class ChatService : BackgroundService
         }
     }
 
-    private List<ChatMessage> BuildRequestMessages(
+    private IReadOnlyDictionary<string, AIFunction> GetAvailableTools(
+        IReadOnlySet<string> selectedAgents)
+    {
+        Dictionary<string, AIFunction> tools = new(
+            _directTools,
+            StringComparer.OrdinalIgnoreCase);
+        foreach (string agentName in selectedAgents)
+        {
+            if (_agentTools.TryGetValue(agentName, out AIFunction? agentTool))
+            {
+                tools.Add(agentTool.Name, agentTool);
+            }
+        }
+
+        return tools;
+    }
+
+    private IReadOnlyDictionary<string, AIFunction> GetSelectedAgentTools(
+        IReadOnlySet<string> selectedAgents)
+    {
+        Dictionary<string, AIFunction> tools = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string agentName in selectedAgents)
+        {
+            if (_agentTools.TryGetValue(agentName, out AIFunction? agentTool))
+            {
+                tools.Add(agentTool.Name, agentTool);
+            }
+        }
+
+        return tools;
+    }
+
+    internal static ChatOptions CreateChatOptions(
+        IEnumerable<AIFunction> tools,
+        bool requireTool = false,
+        string? requiredFunctionName = null)
+    {
+        ChatOptions options = new()
+        {
+            MaxOutputTokens = 5500,
+            FrequencyPenalty = 0,
+            PresencePenalty = 0,
+            Tools = tools.Cast<AITool>().ToList(),
+        };
+        if (options.Tools.Count == 0)
+        {
+            options.ToolMode = ChatToolMode.None;
+        }
+        else if (requireTool)
+        {
+            options.ToolMode = requiredFunctionName is not null
+                ? ChatToolMode.RequireSpecific(requiredFunctionName)
+                : ChatToolMode.RequireAny;
+        }
+
+        return options;
+    }
+
+    private static List<ChatMessage> BuildRequestMessages(
         string systemPrompt,
-        IReadOnlySet<string> selectedAgents,
         IEnumerable<ChatMessage> conversation)
     {
         List<string> systemSections = [];
         if (!string.IsNullOrWhiteSpace(systemPrompt))
         {
             systemSections.Add(systemPrompt);
-        }
-
-        foreach (DeclarativeAgentDescriptor agent in _agentCatalog.GetAgents()
-            .Where(agent => selectedAgents.Contains(agent.Name)))
-        {
-            systemSections.Add(agent.Instructions);
         }
 
         List<ChatMessage> messages = [];
@@ -434,7 +530,9 @@ internal sealed class ChatService : BackgroundService
 
     private async Task ProcessToolRequest(
         IList<AIContent> toolContents,
-        IList<ChatMessage> conversation)
+        IList<ChatMessage> conversation,
+        IReadOnlyDictionary<string, AIFunction> availableTools,
+        CancellationToken cancellationToken)
     {
         foreach (FunctionCallContent toolCall in toolContents.OfType<FunctionCallContent>())
         {
@@ -446,18 +544,39 @@ internal sealed class ChatService : BackgroundService
             string args = string.Join(", ", arguments.Select(argument => $"{argument.Key}: {argument.Value}"));
 
             Debug.WriteLine($"Tool call start: {functionName}({args})");
-            _terminal.ForegroundColor = InternalColor;
-            _terminal.WriteLine($"Calling mcp:{mcp} tool:{functionName}({args})");
+            bool isAgent = _agentNamesByFunction.TryGetValue(functionName, out string? agentName);
+            _terminal.ForegroundColor = isAgent ? ConsoleColor.DarkCyan : InternalColor;
+            _terminal.WriteLine(isAgent
+                ? $"[main] -> [agent:{agentName}] ({args})"
+                : $"[main] -> [mcp:{mcp}] -> [tool:{functionName}] ({args})");
 
-            if (!_tools.TryGetValue(functionName, out AIFunction? tool))
+            if (!availableTools.TryGetValue(functionName, out AIFunction? tool))
             {
                 _terminal.WriteLine($"Unknown function {functionName}");
                 _terminal.ForegroundColor = _defaultColor;
                 continue;
             }
 
-            object? result = await tool.InvokeAsync(arguments);
-            _terminal.WriteLine($"mcp:{mcp} tool result:{result}");
+            object? result;
+            try
+            {
+                result = await tool.InvokeAsync(arguments, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                result = $"Tool '{functionName}' failed: {exception.Message}";
+                if (_verboseState.Enabled)
+                {
+                    _terminal.WriteLine(exception.ToString());
+                }
+            }
+            _terminal.WriteLine(isAgent
+                ? $"[agent:{agentName}] -> [main] result: {result}"
+                : $"[tool:{functionName}] -> [mcp:{mcp}] -> [main] result: {result}");
             Debug.WriteLine($"Tool call end: {functionName}({args})");
             _terminal.ForegroundColor = _defaultColor;
 

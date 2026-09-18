@@ -48,6 +48,22 @@ For some time, the old `ChatAndMCP` will still be part of the repository but exc
 
 The project `McpClientUtilities` is a generic library providing utilities and helpers to simplify the development of applications making use of in-process and out-of-process MCP servers loaded from JSON configuration files. Refer to the README.md in the project file for more details.
 
+### Declarative agents
+
+`ChatAndMultipleMcps` loads declarative agents from the repository-relative folder configured by `DeclarativeAgents:Directory` (`./agents` by default). Each `*.agent.md` file contains standard YAML front matter followed by the agent's system prompt:
+
+```markdown
+---
+name: Chemical Ingredients Expert
+description: Investigates chemical ingredients using PubChem.
+tools:
+  - pubchem/*
+---
+You are an expert in chemical ingredients.
+```
+
+Use `/agent Chemical Ingredients Expert` in the console to select the agent, repeat the command to disable it, or select another agent to switch. For each new user request, the main model is required to delegate to the selected agent. It sees that `agent_*` function and all unassigned MCP tools, but not the agent's PubChem tool schemas. `DeclarativeAgentRunner` then starts a private conversation, gives it only the declared MCP tools, executes its model/tool loop, and returns the final text to the main conversation. Unassigned tools remain available to the main model before and after delegation.
+
 
 
  

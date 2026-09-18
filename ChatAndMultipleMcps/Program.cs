@@ -81,7 +81,7 @@ internal class Program
         builder.Services.AddSingleton(verboseState);
         builder.Services.AddSingleton(terminal);
         builder.Services.AddSingleton<ConsoleLineEditor>();
-        builder.Services.AddSingleton<IDeclarativeAgentCatalog, EmptyDeclarativeAgentCatalog>();
+        builder.Services.AddSingleton<IDeclarativeAgentCatalog, MarkdownDeclarativeAgentCatalog>();
 
         builder.Services
             .AddMcpServer()
