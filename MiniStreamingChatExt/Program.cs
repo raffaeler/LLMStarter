@@ -36,8 +36,8 @@ internal class Program
     static async Task Main(string[] args)
     {
         // == Choose the client to use ==
-        //var selectedClient = GetAzureClient();
-        var selectedClient = GetOpenAIClient();
+        var selectedClient = GetAzureClient();
+        //var selectedClient = GetOpenAIClient();
         //var selectedClient = GetDeepSeekClient();
 
         var host = Host.CreateDefaultBuilder(args)
